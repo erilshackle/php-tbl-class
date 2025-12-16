@@ -1,0 +1,63 @@
+{
+    "name": "eril/tbl-schema-sync",
+    "description": "CLI tool to generate Tbl class constants from MySQL schema and check integrity. Essential for CI/CD.",
+    "homepage": "https://github.com/erilshackle/php-tbl-schema-sync",
+    "type": "library",
+    "keywords": [
+        "mysql",
+        "schema",
+        "constants",
+        "generator",
+        "cli",
+        "database-sync",
+        "ci-cd"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Eril TS Carvalho",
+            "homepage": "https://github.com/erilshackle",
+            "email": "erilandocarvalho@exemplo.com",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/erilshackle/php-tbl-schema-sync/issues",
+        "source": "https://github.com/erilshackle/php-tbl-schema-sync"
+    },
+    "autoload": {
+        "psr-4": {
+            "Eril\\TblSchemaSync\\": "src/"
+        }
+    },
+    "require": {
+        "php": ">=8.0",
+        "ext-pdo": "*",
+        "ext-json": "*"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "bin": [
+        "bin/tbl-class-generate"
+    ],
+    "scripts": {
+        "db:generate": "vendor/bin/tbl-class-generate src/Helpers",
+        "db:check": "vendor/bin/tbl-class-generate --check",
+        
+        "db:sync": [
+            "@db:check",
+            "@db:generate"
+        ]
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

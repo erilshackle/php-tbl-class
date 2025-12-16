@@ -1,0 +1,35 @@
+# ------------------------------------
+# 1. Arquivos Padrão do Composer e PHP
+# ------------------------------------
+/vendor/
+/composer.lock
+
+# ------------------------------------
+# 2. Arquivos Gerados pelo TblSchemaSync
+# ------------------------------------
+# O diretório de estado/log criado pelo Generator.
+/.tblschema/
+
+# Os arquivos Tbl.php gerados pelos usuários (importante para evitar
+# que desenvolvedores versionem acidentalmente as constantes geradas em seus projetos).
+# Nota: Você pode precisar ajustar esse caminho se o seu projeto tiver outras pastas de saída padrão.
+/src/Constants/Tbl.php
+/app/Constants/Tbl.php
+# Pode generalizar se houver muitos caminhos:
+# **/*Tbl.php
+
+# ------------------------------------
+# 3. Arquivos de Ambiente
+# ------------------------------------
+.env
+.env.local
+
+# ------------------------------------
+# 4. Outros Arquivos de Desenvolvimento
+# ------------------------------------
+/tests/output/
+.idea/
+.vscode/
+*.log
+*.sqlite
+/coverage/
