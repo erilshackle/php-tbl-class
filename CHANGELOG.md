@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.1] - 2025-12-17
+
+### Fixed
+- fix: update script commands in composer.json for consistency and clarity
+- fix: correct class name check for Logger in tbl-class-logs
+- fix: correct script commands in composer.json for proper execution
 
 ## [3.0.0] - 2025-12-17
 
