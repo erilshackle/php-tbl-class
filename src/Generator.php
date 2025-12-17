@@ -232,12 +232,18 @@ class Generator
 
     private function showInstructions(): void
     {
+        // Verificar se a classe Tbl já existe
+        if (class_exists('Tbl') || ($this->config->get('output.namespace') && class_exists($this->config->get('output.namespace') . '\\Tbl'))) {
+            // Classe já carregada, não precisa mostrar instruções
+            return;
+        }
+        
         $namespace = $this->config->get('output.namespace');
         $outputFile = $this->config->getOutputFile();
         $relativePath = str_replace(getcwd() . '/', '', $outputFile);
-
+    
         echo "\n📚 Autoload setup:\n\n";
-
+    
         if ($namespace) {
             echo "   // composer.json\n";
             echo "   \"autoload\": {\n";
@@ -251,7 +257,7 @@ class Generator
             echo "       \"files\": [\"$relativePath\"]\n";
             echo "   }\n";
         }
-
+    
         echo "\n   Then: composer dump-autoload\n";
         echo str_repeat('-', 50) . "\n";
     }
