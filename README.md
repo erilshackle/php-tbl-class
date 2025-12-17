@@ -52,7 +52,7 @@ Como este pacote não injeta código de *runtime*, você **DEVE** configurar o c
 
 No terminal de saída, a ferramenta mostrará exatamente o caminho relativo a ser adicionado.
 
-```json
+```
 // Adicione o caminho do arquivo gerado ao seu composer.json
 
 {
