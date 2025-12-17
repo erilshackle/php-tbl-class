@@ -1,146 +1,327 @@
 <div align="center">
-    <h1>Constantes Estáticas Tbl::</h1>
-    <h3>Ferramenta CLI para Geração e Sincronização de Constantes de Tabela como Helper</h3>
-    <p>Gere constantes de classe PHP a partir do seu schema de banco de dados para garantir tipos estáticos e prevenir erros de digitação (*typos*) em nomes de tabelas e colunas.</p>
+    <h1>Tbl::class v3</h1>
+    <h3>CLI Tool to Generate Database Table Constants</h3>
+    <p>Generate PHP class constants from your database schema for type safety and to prevent typos in table/column names.</p>
 
-<p>Acessível globalmente para segurança e produtividade:</p>
-<pre><code>Tbl::users</code></pre>
-<pre><code>Tbl::users_id</code></pre>
-<pre><code>Tbl::users_role_id</code></pre>
+<p>Accessible globally for safety and productivity:</p>
+<div>
+  <code title="table"> Tbl::table</code> 
+  <code title="column">Tbl::table_column</code>
+  <code style="font-size:small;opacity:0.4;" title="comming soon">Tbl::fk_table1_table2</code>
+</div>
 
 ---
 </div>
 
-| Status | Licença | Instalação (Tooling) |
+| Status | License | Installation |
 | :--- | :--- | :--- |
-| Versão Estável (v2.0.0) | MIT | `composer require eril/tbl-schema-sync --dev` |
+| Stable v3.0.0 | MIT | `composer require eril/tbl-class --dev` |
 
 ---
 
-## 🌟 Funcionalidades Principais
-
-* **Ferramenta Exclusiva de Desenvolvimento:** O pacote é uma dependência `--dev` e não introduz dependências de *runtime* (como a classe `TblInitializer`) no código de produção.
-* **Classe `Tbl`:** Gera a classe `Tbl` (por padrão, sem *namespace*) para ser carregada no escopo global através do *autoload* manual do Composer.
-* **Verificação de Schema para CI/CD:** O modo `--check` otimiza *pipelines* de Integração Contínua (CI). Retorna `exit code 1` se o *schema* mudou, forçando a regeneração e o *commit* das constantes.
-* **Sincronização de Estado:** Usa um arquivo oculto `.tblschema/.tblsync.ini` na raiz do projeto para armazenar o *hash* MD5 do *schema* atual.
-
----
-
-## 🛠️ Instalação
-
-Adicione o pacote como uma **dependência de desenvolvimento**.
+## 🚀 Quick Start
 
 ```bash
-composer require eril/tbl-schema-sync --dev
+# Install
+composer require eril/tbl-class --dev
+
+# Generate constants
+tbl-class
+
+# Setup tblclass.yaml 
+
+# That's it! Constants ready to use:
+echo Tbl::users;        // 'users'
+echo Tbl::users_email;  // 'email'
 ```
 
 ---
 
-##  Uso e Configuração
-A ferramenta `vendor/bin/tbl-class-generate` possui dois modos de operação principais.
+## ✨ Features
 
-### Modo 1: Geração de Constantes (Padrão)
-Este modo cria ou atualiza o arquivo `Tbl.php` com todas as constantes. Se o diretório for omitido, o arquivo é salvo na raiz do projeto (`./Tbl.php`).
+* **Zero Runtime Dependencies** - Pure development tool, no production overhead
+* **Multi-Database Support** - MySQL & SQLite out of the box
+* **CI/CD Ready** -  `--check` mode for pipeline integration
+* **Simple Configuration** - Clean YAML config with sensible defaults
+* **Smart Connection** - Auto-detects .env, environment vars, or custom callbacks
+* **Namespace Support** - Generate namespaced or global classes
+* **Change Tracking** - Logs schema changes for audit trail
 
-| Sintaxe | Exemplo | Saída |
-| --- | --- | --- |
-| `tbl-class-generate [<dir>] -db <name>` | `tbl-class-generate src/Constants -db app_db` | `src/Constants/Tbl.php` |
-| `tbl-class-generate -db app_db` | `tbl-class-generate -db app_db` | `./Tbl.php` |
+---
 
-#### ⚠️ Passo Final Obrigatório (Autoload Manual)
-Como este pacote não injeta código de *runtime*, você **DEVE** configurar o carregamento da classe `Tbl` manualmente via `composer.json` (`autoload.files`).
+## 📦 Installation
 
-No terminal de saída, a ferramenta mostrará exatamente o caminho relativo a ser adicionado.
+```bash
+# Local project
+composer require eril/tbl-class --dev
 
+# Global installation
+composer global require eril/tbl-class
 ```
-// Adicione o caminho do arquivo gerado ao seu composer.json
 
+---
+
+## 🛠️ Usage
+
+### Basic Usage
+```bash
+# Generate constants (creates config if missing)
+tbl-class
+
+# With custom output directory
+tbl-class src/Models/
+
+# With namespace
+tbl-class --namespace="App\Models"
+
+# Check for schema changes (CI/CD)
+tbl-class --check
+```
+
+### View/Manage Configuration
+_setup your tblclass.yaml_
+```bash
+# Show config file
+tbl-class --config
+```
+
+### View Logs
+```bash
+# Show generation logs
+tbl-class-logs
+
+# Clear logs
+tbl-class-logs --clear
+```
+
+---
+
+## ⚙️ Configuration
+
+On first run, a `tblclass.yaml` file is created:
+
+```yaml
+# Database configuration
+database:
+  # Optional custom connection:
+  # connection: 'App\Database::getConnection'
+
+  driver: mysql           # mysql or sqlite
+  
+  # For MySQL:
+  host: DB_HOST          # or 'localhost'
+  port: DB_PORT          # or 3306
+  name: DB_NAME          # required
+  user: DB_USER          # or 'root'
+  password: DB_PASS      # or ''
+  
+  # For SQLite:
+  # driver: sqlite
+  # path: database.sqlite   # or DB_PATH env var
+
+# Output configuration  
+output:
+  path: "./"              # Where to save Tbl.php
+  namespace: ""           # PHP namespace (optional)
+```
+> You can copy it and put on your project root, filename must be **"tblclass.yaml"**
+
+### Connection Methods (choose one):
+
+1. **Environment Variables** (recommended):
+   ```bash
+   # .env file
+   DB_NAME=my_database
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASS=
+   ```
+
+2. **Direct Values in YAML** (not recomended, but &#x1f644; ):
+   ```yaml
+   database:
+     name: my_database
+     host: localhost
+     user: root
+     password: ""
+   ```
+
+3. **Custom PDO Callback**:
+   ```yaml
+   database:
+     connection: 'App\Database::getConnection'
+   ```
+
+---
+
+## 🔄 CI/CD Integration
+
+### GitHub Actions Example:
+```yaml
+name: Check Database Schema
+
+on: [push, pull_request]
+
+jobs:
+  check-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: shivammathur/setup-php@v2
+      
+      - name: Check schema changes
+        env:
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+        run: vendor/bin/tbl-class --check
+        # Exit code 0 = unchanged, 1 = changed
+```
+
+### Composer Scripts:
+```json
 {
-    "autoload": {
-        "files": [
-            "src/Constants/Tbl.php" // Substitua pelo seu caminho real
-        ]
-    }
+  "scripts": {
+    "db:generate": "tbl-class src/Models/",
+    "db:check": "tbl-class --check",
+    "db:sync": ["@db:check", "@db:generate"]
+  }
 }
-
 ```
 
-Após editar, execute: `composer dump-autoload` para que a classe `Tbl` seja carregada globalmente.
-
 ---
 
-### Modo 2: Verificação de Schema para CI/CD (`--check`)
-Este modo verifica se o *schema* do banco de dados mudou. É ideal para *scripts* de *pre-commit* ou *pipelines* de CI.
-
-| Sintaxe | Exemplo |
-| --- | --- |
-| `vendor/bin/tbl-class-generate --check -db <database_name>` | `vendor/bin/tbl-class-generate --check -db app_db` |
-
-#### Comportamento e Códigos de Saída
-| Resultado | Código de Saída | Ação no CI |
-| --- | --- | --- |
-| **Schema Não Mudou** | **`0`** (Sucesso) | O CI continua. |
-| **Schema Mudou** | **`1`** (Erro) | O CI **falha**. Força o desenvolvedor a gerar e commitar a alteração. |
-| **Falha na Conexão** | **`1`** (Erro) | O CI falha. |
-
----
-
-## Exemplo de Uso no Código
-Uma vez configurado o *autoload* manual, você pode acessar as constantes em qualquer lugar da sua aplicação:
+## 💡 Usage in Code
 
 ```php
 <?php
+// Once generated and autoload configured:
 
-// Não é necessário "use Tbl;" se a classe foi carregada no escopo global via autoload.files.
+// Use constants anywhere in your app
+$query = "SELECT * FROM " . Tbl::users . 
+         " WHERE " . Tbl::users_email . " = ?";
 
-// Você obtém autocomplete na sua IDE e segurança contra typos!
-$sql = "SELECT " . Tbl::usuarios_nome . ", " . Tbl::usuarios_email . 
-       " FROM " . Tbl::usuarios . 
-       " WHERE " . Tbl::usuarios_id . " = :id";
-
+// Get autocomplete in your IDE
+echo Tbl::products;       // 'products'
+echo Tbl::products_price; // 'price'
+echo Tbl::orders;         // 'orders'
 ```
 
----
-
-## Uso Simplificado com Composer Scripts
-Para facilitar o uso diário, adicione *scripts* ao seu `composer.json`. **Lembre-se de substituir `my_database_name` e o caminho de saída.**
-
+### Autoload Configuration:
+After generation, add to `composer.json`:
 ```json
-"scripts": {
-    "db:generate": "vendor/bin/tbl-class-generate src/Constants -db my_database_name",
-    "db:check": "vendor/bin/tbl-class-generate --check -db my_database_name",
-    "db:sync": [
-        "@db:check",
-        "@db:generate"
-    ]
+{
+  "autoload": {
+    "files": ["src/Models/Tbl.php"]
+  }
 }
+```
+Then run: `composer dump-autoload`
 
+---
+
+## 📊 Generated Output Example
+
+```php
+<?php
+namespace App\Models;
+
+/**
+ * Database table constants
+ * - Schema: my_database
+ * - Date: 2024-01-15 10:30:15
+ */
+class Tbl
+{
+    // Table: users
+    public const users = 'users';
+    public const users_id = 'id';
+    public const users_email = 'email';
+    public const users_name = 'name';
+    
+    // Table: products
+    public const products = 'products';
+    public const products_id = 'id';
+    public const products_price = 'price';
+}
 ```
 
 ---
 
-## Configurações de Banco de Dados
-A ferramenta lê as credenciais de conexão do seu banco de dados através de variáveis de ambiente (ENV), ou você deve passá-las diretamente via `-db <nome>`.
+## 🐛 Troubleshooting
 
-| Variável | Padrão | Descrição |
-| --- | --- | --- |
-| `DB_HOST` | `localhost` | Host do banco de dados. |
-| `DB_NAME` | **(Obrigatório)** | Nome do banco de dados (também pode ser passado via `-db`). |
-| `DB_USER` | `root` | Usuário de conexão. |
-| `DB_PASS` | (vazio) | Senha de conexão. |
+### Common Issues:
 
----
+1. **"Autoload not found"**
+   ```bash
+   # Run composer install
+   composer install
+   ```
 
-## Arquivos Gerados (Ignorar no Git)
-É **essencial** que você adicione estes arquivos ao seu `.gitignore` para evitar conflitos de *merge* e *commitar* binários desnecessários:
+2. **"Database name not configured"**
+   ```bash
+   # Edit config file
+   tbl-class --config
+   # Set database.name in tblclass.yaml
+   ```
 
-```gitignore
-# Gerados pelo eril/tbl-schema-sync
-.tblschema/
-<output_directory>/Tbl.php
+3. **Connection fails**
+   ```bash
+   # Check your .env or config file
+   # Ensure database server is running
+   ```
 
+### Getting Help:
+```bash
+# Show all options
+tbl-class --help
+tbl-class-logs --help
 ```
 
 ---
 
-##📜 LicençaEste projeto é licenciado sob a licença MIT.
+## 📁 Project Structure
+
+```
+tbl-class/
+├── bin/
+│   ├── tbl-class          # Main generator
+│   └── tbl-class-logs     # Log viewer
+├── src/
+│   ├── Config.php         # YAML configuration
+│   ├── ConnectionResolver.php # Database connections
+│   ├── Generator.php      # Constants generator
+│   └── Logger.php         # Logging system
+└── .tblclass/             # State and logs directory
+```
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) file for details.
+
+---
+
+## 🎯 Why tbl-class?
+
+* **Type Safety** - Eliminate string typos in SQL queries
+* **IDE Autocomplete** - Get instant table/column name suggestions
+* **Refactoring Friendly** - Easy to find and update table references
+* **Schema Documentation** - Generated class serves as schema reference
+* **CI/CD Integration** - Automatic schema change detection
+
+---
+
+<div align="center">
+<strong>Stop writing strings, start using constants! Tbl:: 🚀 </strong>
+</div>

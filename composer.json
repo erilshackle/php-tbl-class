@@ -35,7 +35,14 @@
             "Eril\\TblClass\\": "src/"
         }
     },
-    "bin": ["bin/tbl-class"],
+    "bin": [
+        "bin/tbl-class",
+        "bin/tbl-class-logs"
+    ],
+    "scripts": {
+        "tbl-class-generate": "@php\bin\tbl-class .",
+        "tbl-class-logs": "@php\bin\tbl-class-logs"
+    },
     "suggest": {
         "ext-yaml": "For faster YAML parsing"
     }
