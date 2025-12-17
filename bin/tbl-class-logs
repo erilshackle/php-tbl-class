@@ -19,7 +19,7 @@ foreach ($autoloadPaths as $path) {
     }
 }
 
-if (!class_exists('Eril\\TblClass\\LogService')) {
+if (!class_exists('Eril\\TblClass\\Logger')) {
     die("❌ Autoload not found.\n");
 }
 
