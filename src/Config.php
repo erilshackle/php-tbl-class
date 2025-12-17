@@ -164,19 +164,20 @@ public function resolveEnvVars($value)
 }
 
     public function get(string $key, $default = null)
-    {
-        $keys = explode('.', $key);
-        $value = $this->config;
-
-        foreach ($keys as $k) {
-            if (!isset($value[$k])) {
-                return $default;
-            }
-            $value = $value[$k];
+{
+    $keys = explode('.', $key);
+    $value = $this->config;
+    
+    foreach ($keys as $k) {
+        if (!isset($value[$k])) {
+            return $default;
         }
-
-        return $value;
+        $value = $value[$k];
     }
+    
+    // Resolve environment variables before returning
+    return $this->resolveEnvVars($value);
+}
 
     public function set(string $key, $value): self
     {
