@@ -9,24 +9,24 @@ $helpText = "
 tbl-class-generate - CLI tool to generate the Tbl class constants from your MySQL schema.
 
 Usage:
-  tbl-class-generate <output_directory> -db <database_name>
+  tbl-class-generate [<output_directory>] -db <database_name>
   tbl-class-generate --check -db <database_name>
   tbl-class-generate
 
 Options:
-  <output_directory>      *Positional Argument*. Output directory where the 'Tbl.php' file will be saved.
+  <output_directory>      *Optional Positional Argument*. Output directory where the 'Tbl.php' file will be saved. Default: root directory (./).
   -db <name>              *Required*. The name of the database to read the schema from. Can be set via DB_NAME env var.
   --check                 Schema check mode. Compares MD5 hash of the current schema with the one saved in .tblschema/.tblsync.ini. Returns exit code 0 (OK) or 1 (CHANGE).
 
 Examples:
-  1. Generate the constants file:
-     tbl-class-generate src/Helpers/ -db my_project_db
+  1. Generate the constants file in a specific path:
+      tbl-class-generate src/Helpers/ -db my_project_db
 
-  2. Check if the schema has changed (ideal for CI/CD):
-     tbl-class-generate --check -db my_project_db
+  2. Generate the constants file in the root directory (./Tbl.php):
+      tbl-class-generate -db my_project_db
 
-  3. Show this help message:
-     tbl-class-generate
+  3. Check if the schema has changed (ideal for CI/CD):
+      tbl-class-generate --check -db my_project_db
 ";
 
 // --- Argument Parsing and Logic ---
@@ -40,12 +40,17 @@ $check_mode = false;
 
 // Process positional argument and flags
 foreach ($args as $index => $arg) {
+    // 1. Check for flags
     if ($arg === '--check') {
         $check_mode = true;
     } elseif ($arg === '-db' && isset($args[$index + 1])) {
+        // Handle standalone -db <name>
         $db_name = $args[$index + 1];
+    } elseif ($db_name === null && str_starts_with($arg, '-db=')) {
+        // Handle inline -db=<name>
+        $db_name = substr($arg, 4);
     } elseif ($output_dir === null && $arg[0] !== '-') {
-        // Assume o primeiro argumento que não é flag como diretorio de saida
+        // 2. Assume the first non-flag argument is the output directory
         $output_dir = $arg;
     }
 }
@@ -53,19 +58,16 @@ foreach ($args as $index => $arg) {
 
 // --- 1. Validation and Help Display ---
 
-// Se nenhum argumento foi passado, mostra o help
+// If no arguments were passed, show help
 if (empty($argv) || count($argv) === 1) {
     echo $helpText;
     exit(0);
 }
 
-// Se está no modo de geração e o diretório não foi fornecido
-if (!$check_mode && $output_dir === null) {
-    die("❌ Error: Output directory must be provided as the first argument in generation mode.\nRun 'tbl-class-generate' for help.\n");
-}
+// NOTE: We no longer force $output_dir in generation mode. It defaults to './' later.
 
 
-// --- 2. Autoload and Connection (Code remains the same) ---
+// --- 2. Autoload and Connection ---
 
 $baseDir = __DIR__ . '/../'; 
 $autoloadPath = $baseDir . 'vendor/autoload.php';
@@ -75,26 +77,25 @@ if (!file_exists($autoloadPath)) {
 }
 require_once $autoloadPath;
 
-// ... (db_connection function definition remains here) ...
-
+// --- db_connection function definition ---
 if (!function_exists('db_connection')) {
-    // ... (db_connection definition with logic to handle DB_NAME env var) ...
     function db_connection(): PDO {
         $host = getenv('DB_HOST') ?: 'localhost';
+        // Check ENV for DB_NAME first
         $db   = getenv('DB_NAME') ?: null; 
         $user = getenv('DB_USER') ?: 'root';
         $pass = getenv('DB_PASS') ?: '';
         $charset = 'utf8mb4';
 
         if ($db === null) {
-             throw new \Exception("DB_NAME not defined. Use -db or environment variable.");
+              throw new \Exception("DB_NAME not defined.");
         }
 
         $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
         $options = [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_ERRMODE              => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_EMULATE_PREPARES     => false,
         ];
         
         try {
@@ -107,7 +108,7 @@ if (!function_exists('db_connection')) {
 
 // --- 3. Database Validation and Execution ---
 
-// Set DB name from env if not provided
+// Set DB name from env if not provided by CLI
 if ($db_name === null) {
     $db_name = getenv('DB_NAME') ?: 'unknown';
     if ($db_name === 'unknown') {
@@ -122,11 +123,15 @@ try {
 }
 
 try {
-    // Note: $output_dir will be null in check mode, which is fine, 
-    // as the Generator class only uses it in generation mode.
-    $generator = new Generator($pdo, $db_name, $output_dir ?: './', $check_mode);
-    $generator = new Generator($pdo, $db_name, $output_dir ?: './', $check_mode);
+    // CRITICAL FIX: If output_dir is null, default to current directory (./).
+    // The Generator class will handle an empty string (using getcwd()), 
+    // but passing './' is clearer for the CLI script.
+    $target_dir = $output_dir ?: './'; 
+    
+    // FIX: Remove duplicated line and pass the correct target_dir
+    $generator = new Generator($pdo, $db_name, $target_dir, $check_mode);
     $generator->run();
+    
 } catch (Exception $e) {
     die("❌ Execution Error: " . $e->getMessage() . "\n");
 }

@@ -1,5 +1,5 @@
 <?php
-// src/Generator.php
+// src/Generator.php - Final Tooling Version
 
 namespace Eril\TblSchemaSync;
 
@@ -8,39 +8,44 @@ use Exception;
 
 class Generator
 {
-    // Class name generated for the user's project
     public const CLASS_NAME = 'Tbl'; 
-    // Output filename (Tbl.php)
     private const DEFAULT_FILENAME = self::CLASS_NAME . '.php'; 
     
-    // Log directory hidden in the user's project root (e.g., ./ .tblschema /)
-    private const LOG_DIR = __DIR__ . '/../../../.tblschema/';
-    // Log file name using INI format (Only stores MD5 now)
+    // Nomes baseados no projeto do usuário, não em caminhos relativos internos
+    private const LOG_DIR_NAME = '.tblschema/';
     private const CHECK_LOG_FILENAME = '.tblsync.ini'; 
-    // Full path for the log file
-    private const CHECK_LOG_FILE = self::LOG_DIR . self::CHECK_LOG_FILENAME; 
 
     private PDO $pdo;
     private string $dbName;
     private string $outputDir;
     private bool $checkMode;
     private string $outputFile;
+    
+    // Variáveis de instância para armazenar os caminhos absolutos (necessário para getcwd())
+    private string $checkLogFile; 
+    private string $logDirPath; 
 
     public function __construct(PDO $pdo, string $dbName, string $outputDir, bool $checkMode)
     {
         $this->pdo = $pdo;
         $this->dbName = $dbName;
-        // Ensure outputDir ends with a slash
-        $this->outputDir = rtrim($outputDir, '/') . '/';
         $this->checkMode = $checkMode;
 
-        // The final output file path for Tbl.php
+        // --- Calcula o Diretório de Saída (Output Directory) ---
+        // Se outputDir for omitido, usa a raiz do projeto (CWD).
+        if (empty($outputDir)) {
+             $outputDir = getcwd();
+        }
+        
+        $this->outputDir = rtrim($outputDir, '/') . '/';
         $this->outputFile = $this->outputDir . self::DEFAULT_FILENAME;
+        
+        // --- Cálculo Absoluto do Caminho de Log (Robusto via getcwd()) ---
+        $projectRoot = getcwd();
+        $this->logDirPath = $projectRoot . '/' . self::LOG_DIR_NAME;
+        $this->checkLogFile = $this->logDirPath . self::CHECK_LOG_FILENAME;
     }
     
-    /**
-     * Main entry point to execute the operation.
-     */
     public function run(): void
     {
         try {
@@ -51,7 +56,6 @@ class Generator
                 exit(1);
             }
 
-            // Generate the content of the Tbl class in memory
             $constantsContent = $this->generateConstantsContent($tableList);
             $currentMd5 = md5($constantsContent);
             
@@ -66,9 +70,6 @@ class Generator
         }
     }
 
-    /**
-     * Fetches the list of tables from the database.
-     */
     private function fetchTableList(): array
     {
         $stmt = $this->pdo->prepare("
@@ -83,12 +84,8 @@ class Generator
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
-    /**
-     * Generates the PHP content for the Tbl class (without namespace, to allow global access).
-     */
     private function generateConstantsContent(array $tableList): string
     {
-        // Generates the class in the global namespace (Tbl::users)
         $constantsContent = "class " . self::CLASS_NAME . "\n{\n"; 
 
         foreach ($tableList as $tableName) {
@@ -103,17 +100,13 @@ class Generator
             $constDeclaration = 'public const';
             $indent = '    ';
             
-            $tableConstName = $tablePrefix;
-            $columnConstPrefix = $tablePrefix . '_';
-
+            // Usando $tablePrefix como constante de nome de tabela
             $constantsContent .= "\n" . $indent . "// --- Table: " . $tableName . " ---\n";
-
-            // Table Constant
-            $constantsContent .= $indent . "$constDeclaration $tableConstName = '$tableName';\n";
+            $constantsContent .= $indent . "$constDeclaration $tablePrefix = '$tableName';\n";
 
             // Column Constants (table_column)
             foreach ($columns as $column) {
-                $constNameColumn = $columnConstPrefix . strtolower($column);
+                $constNameColumn = $tablePrefix . '_' . strtolower($column);
                 $constantsContent .= $indent . "$constDeclaration $constNameColumn = '$column';\n";
             }
         }
@@ -122,9 +115,6 @@ class Generator
         return $constantsContent;
     }
 
-    /**
-     * Fetches columns for a specific table.
-     */
     private function getTableColumns(string $tableName): array
     {
         $stmt = $this->pdo->prepare("
@@ -141,16 +131,12 @@ class Generator
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
     
-    /**
-     * Handles the check mode (--check).
-     */
     private function handleCheckMode(string $currentMd5): void
     {
         echo "\n🔎 Starting schema change verification for database '{$this->dbName}'...\n";
 
-        // Read the saved INI file (if it exists)
-        $savedConfig = file_exists(self::CHECK_LOG_FILE) ? parse_ini_file(self::CHECK_LOG_FILE) : [];
-
+        // Read the saved INI file (agora usa $this->checkLogFile)
+        $savedConfig = file_exists($this->checkLogFile) ? parse_ini_file($this->checkLogFile) : [];
         $savedMd5 = $savedConfig['md5'] ?? '';
 
         if ($savedMd5 === $currentMd5) {
@@ -160,19 +146,19 @@ class Generator
         
         // --- If MD5 is different or missing: Alert and Update INI File ---
         
-        // 1. Ensure the log directory exists
-        if (!is_dir(self::LOG_DIR)) {
-            if (!mkdir(self::LOG_DIR, 0777, true)) {
-                die("❌ Error: Could not create log directory: " . self::LOG_DIR . "\n");
+        // 1. Ensure the log directory exists (agora usa $this->logDirPath)
+        if (!is_dir($this->logDirPath)) {
+            if (!mkdir($this->logDirPath, 0777, true)) {
+                die("❌ Error: Could not create log directory: " . $this->logDirPath . "\n");
             }
         }
         
-        // 2. Prepare new INI content (Only MD5 is saved)
+        // 2. Prepare new INI content
         $newConfigContent = "; Generated on: " . date('Y-m-d H:i:s') . "\n";
         $newConfigContent .= "md5=\"" . $currentMd5 . "\"\n";
         
-        // 3. Write new log content
-        if (file_put_contents(self::CHECK_LOG_FILE, $newConfigContent) !== false) {
+        // 3. Write new log content (agora usa $this->checkLogFile)
+        if (file_put_contents($this->checkLogFile, $newConfigContent) !== false) {
             if (empty($savedMd5)) {
                 echo "\n⚠️ Schema verified for the first time. MD5 saved to " . self::CHECK_LOG_FILENAME . ".\n";
                 echo "   Current MD5: $currentMd5\n";
@@ -180,20 +166,17 @@ class Generator
                 echo "\n❌ ALERT: Database Schema HAS CHANGED!\n";
                 echo "   Old MD5: " . ($savedMd5 ?: 'N/A') . "\n";
                 echo "   New MD5:   $currentMd5\n";
-                echo "   The state file " . self::CHECK_LOG_FILENAME . " has been updated. Constants regeneration is required.\n";
+                echo "   The state file " . self::CHECK_LOG_FILENAME . " has been updated. Regeneration required.\n";
             }
         } else {
-             echo "\n❌ Error! Could not write to state file: " . self::CHECK_LOG_FILE . "\n";
+            echo "\n❌ Error! Could not write to state file: " . $this->checkLogFile . "\n";
         }
-        exit(1); // Return error code 1 on change/failure
+        exit(1); 
     }
     
-    /**
-     * Handles the generation mode (default).
-     */
     private function handleGenerationMode(string $constantsContent, string $currentMd5, int $tableCount): void
     {
-        // 1. Create Output Directory (if it doesn't exist)
+        // 1. Create Output Directory
         if (!empty($this->outputDir) && !is_dir($this->outputDir)) {
             if (!mkdir($this->outputDir, 0755, true)) {
                 throw new Exception("Could not create output directory: '{$this->outputDir}'");
@@ -211,22 +194,19 @@ class Generator
             echo "   Tables Processed: $tableCount\n";
             
             // 3. Save MD5 after successful generation
-            
-            // Ensure the log directory exists
-            if (!is_dir(self::LOG_DIR)) {
-                if (!mkdir(self::LOG_DIR, 0777, true)) {
-                    throw new Exception("Could not create log directory: " . self::LOG_DIR);
+            if (!is_dir($this->logDirPath)) {
+                if (!mkdir($this->logDirPath, 0777, true)) {
+                    throw new Exception("Could not create log directory: " . $this->logDirPath);
                 }
             }
 
-            // Save state in INI format (Only MD5 is saved)
             $newConfigContent = "; Generated on: " . date('Y-m-d H:i:s') . "\n";
             $newConfigContent .= "md5=\"" . $currentMd5 . "\"\n";
             
-            file_put_contents(self::CHECK_LOG_FILE, $newConfigContent);
+            file_put_contents($this->checkLogFile, $newConfigContent);
             
-            // 4. Display Initializer Instructions
-            $this->displayInitializerInstructions();
+            // 4. Display instructions for manual autoload (sem TblInitializer)
+            $this->displayAutoloadInstructions();
             
         } else {
             throw new Exception("Could not write to file: **{$this->outputFile}**");
@@ -234,36 +214,67 @@ class Generator
     }
     
     /**
-     * Generates the dynamic file header.
+     * Generates the dynamic file header, including the suggested PSR-4 namespace (commented out).
      */
     private function generateFileHeader(): string {
         $content = "<?php\n\n";
-        $content .= "/**\n";
+        
+        $projectRoot = getcwd();
+        $outputDirAbs = rtrim($this->outputDir, DIRECTORY_SEPARATOR); 
+
+        // Calculate the relative path from the project root
+        $relativeDir = trim(str_replace($projectRoot, '', $outputDirAbs), DIRECTORY_SEPARATOR); 
+        $suggestedNamespace = '';
+
+        if (!empty($relativeDir)) {
+             $segments = explode(DIRECTORY_SEPARATOR, $relativeDir);
+             
+             // Capitalize the first segment for PSR-4 convention
+             $segments = array_map(function($segment) use ($segments) {
+                 if ($segment === $segments[0]) {
+                     return ucfirst($segment);
+                 }
+                 return $segment;
+             }, $segments);
+             
+             $suggestedNamespace = implode('\\', $segments);
+        }
+
+        // --- Include Commented Namespace ---
+        if (!empty($suggestedNamespace)) {
+             $content .= "// namespace " . $suggestedNamespace . ";\n"; // Namespace sugerido
+        } else {
+             $content .= "// File is in the project root (global scope).\n";
+        }
+        
+        $content .= "\n/**\n";
         $content .= " * Constants automatically generated from database '{$this->dbName}'.\n";
-        $content .= " * Mode: Class " . self::CLASS_NAME . " (Global Namespace)\n";
+        $content .= " * Mode: Class " . self::CLASS_NAME . " (Global/Suggested Namespace)\n";
         $content .= " * Generated on: " . date('Y-m-d H:i:s') . "\n";
         $content .= " */\n";
         return $content;
     }
     
     /**
-     * Exibe instruções claras sobre como o desenvolvedor deve configurar o autoload via TblInitializer.
+     * Displays instructions on how the developer must configure the autoload via composer.json.
      */
-    private function displayInitializerInstructions(): void 
+    private function displayAutoloadInstructions(): void 
     {
-        // Determina o caminho relativo a ser exibido para a instrução use()
         $cwd = rtrim(getcwd(), '/') . '/';
-        // Remove o Tbl.php do caminho e remove o diretório base
-        $outputDirName = rtrim(str_replace($cwd, '', $this->outputDir), '/'); 
+        $relativeFilePath = str_replace($cwd, '', $this->outputFile);
         
-        echo "\n" . str_repeat('-', 30) . " CONFIGURATION REQUIRED " . str_repeat('-', 30) . "\n";
-        echo "The " . self::CLASS_NAME . " class has been successfully generated.\n";
-        echo "To enable 'use Tbl;' access in your application, add the following lines to your bootstrap file:\n\n";
+        echo "\n" . str_repeat('-', 30) . " MANUAL AUTOLOAD REQUIRED " . str_repeat('-', 26) . "\n";
+        echo "The " . self::CLASS_NAME . ".php file has been successfully generated.\n";
+        echo "To use 'Tbl::...' (in global scope) you must manually configure Composer's 'autoload.files' section:\n\n";
         
-        echo "   use Eril\\TblSchemaSync\\TblInitializer;\n";
-        echo "   TblInitializer::use('{$outputDirName}');\n"; // <-- Passa o diretório de saída
+        echo "   // composer.json\n";
+        echo "   \"autoload\": {\n";
+        echo "       \"files\": [\n";
+        echo "           \"{$relativeFilePath}\"\n"; 
+        echo "       ]\n";
+        echo "   }\n";
         
-        echo "\nNOTE: This step replaces manual Composer autoload configuration.\n";
+        echo "\nNOTE: After editing composer.json, run 'composer dump-autoload'.\n";
         echo str_repeat('-', 80) . "\n";
     }
 }

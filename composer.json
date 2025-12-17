@@ -31,7 +31,7 @@
         }
     },
     "require": {
-        "php": ">=8.0",
+        "php": ">=8.1", 
         "ext-pdo": "*",
         "ext-json": "*"
     },
@@ -46,15 +46,6 @@
     "bin": [
         "bin/tbl-class-generate"
     ],
-    "scripts": {
-        "db:generate": "vendor/bin/tbl-class-generate src/Helpers",
-        "db:check": "vendor/bin/tbl-class-generate --check",
-        
-        "db:sync": [
-            "@db:check",
-            "@db:generate"
-        ]
-    },
     "config": {
         "sort-packages": true
     },
