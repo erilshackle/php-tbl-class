@@ -1,0 +1,181 @@
+#!/usr/bin/env php
+<?php
+// bin/tbl-class
+
+use Eril\TblClass\Config;
+use Eril\TblClass\ConnectionResolver;
+use Eril\TblClass\Generator;
+
+$quickHelp = "tbl-class - Generate Tbl class constants\n"
+    . "Usage: tbl-class [<output>] [options]\n"
+    . "       tbl-class --config[=<file>]\n"
+    . "       tbl-class --check\n"
+    . "       tbl-class --help\n";
+
+$fullHelp = <<<HELP
+tbl-class - Generate Tbl class constants from database
+
+Usage:
+  tbl-class [<output>] [options]
+  tbl-class --config
+  tbl-class --check
+  tbl-class --help
+
+Arguments:
+  <output>        Output directory (default: current directory)
+
+Options:
+  --check         Check mode for CI/CD (exit 0=unchanged, 1=changed)
+  --namespace=<ns> PHP namespace for Tbl class
+  --config         Generates the config file
+  --help          Show this help
+
+Examples:
+  tbl-class                    # Generate constants
+  tbl-class src/Models/        # Output to directory
+  tbl-class --check           # Check for schema changes
+  tbl-class --config          # Show config file
+
+HELP;
+
+// Parse args
+$output = null; // null = não especificado
+$check = false;
+$namespace = null;
+$configFile = null;
+$configMode = false;
+$showHelp = false;
+
+for ($i = 1; $i < count($argv); $i++) {
+    $arg = $argv[$i];
+
+    if ($arg === '--help' || $arg === '-h') {
+        $showHelp = true;
+    } elseif ($arg === '--check') {
+        $check = true;
+    } elseif ($arg === '--config') {
+        $configMode = true;
+    } elseif (str_starts_with($arg, '--config=')) {
+        $configMode = true;
+        $configFile = substr($arg, 9);
+    } elseif (str_starts_with($arg, '--namespace=')) {
+        $namespace = substr($arg, 12);
+    } elseif ($arg[0] !== '-') {
+        $output = $arg;
+    } else {
+        echo "❌ Unknown option: $arg\n\n";
+        echo $quickHelp;
+        exit(1);
+    }
+}
+
+// Help se solicitado
+if ($showHelp) {
+    echo $fullHelp;
+    exit(0);
+}
+
+// Autoload
+$autoloadPaths = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+    dirname(__DIR__, 3) . '/autoload.php',
+];
+
+foreach ($autoloadPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        break;
+    }
+}
+
+if (!class_exists('Eril\\TblClass\\Config')) {
+    die("❌ Autoload not found. Run 'composer install' first.\n");
+}
+
+// Config mode
+if ($configMode) {
+    $config = new Config($configFile);
+
+    echo "📄 Config file: " . $config->getConfigFile() . "\n\n";
+
+    if ($config->isNew()) {
+        echo "✅ New config template created.\n";
+    }
+
+    echo file_get_contents($config->getConfigFile());
+    exit(0);
+}
+
+// Main execution - SEM VERIFICAÇÃO DE ARGUMENTOS VAZIOS
+try {
+    $config = new Config($configFile);
+
+    if ($config->isNew()) {
+        echo "✨ First run detected!\n";
+        echo "✅ Config template created: " . $config->getConfigFile() . "\n\n";
+
+        echo "Please edit the config file with your database settings:\n";
+        echo "1. Set 'database.name' (for MySQL) or 'database.path' (for SQLite)\n";
+        echo "2. Adjust other settings as needed\n";
+        echo "3. Run 'tbl-class' again\n\n";
+
+        exit(0);
+    }
+
+    // Verificar configuração básica
+    $driver = $config->getDriver();
+    $dbName = $config->getDatabaseName();
+    $dbPath = $config->get('database.path');
+
+    if ($driver === 'mysql' && empty($dbName)) {
+        echo "❌ MySQL requires 'database.name' to be set.\n";
+        echo "Edit " . $config->getConfigFile() . " or use environment variables.\n";
+        exit(1);
+    }
+
+    if ($driver === 'sqlite' && empty($dbPath)) {
+        echo "❌ SQLite requires 'database.path' to be set.\n";
+        echo "Edit " . $config->getConfigFile() . "\n";
+        exit(1);
+    }
+
+    // Aplicar opções CLI (se especificadas)
+    if ($namespace) {
+        $config->set('output.namespace', $namespace);
+    }
+
+    if ($output) {
+        $config->set('output.path', $output);
+    }
+    // Se $output for null, usa do YAML ou default
+
+    // Conectar
+    $pdo = ConnectionResolver::fromConfig($config);
+
+    // Mensagem de conexão
+    if ($driver === 'mysql') {
+        echo "📦 Connected to MySQL database: $dbName\n";
+    } else {
+        $dbFile = basename($dbPath);
+        echo "📦 Connected to SQLite database: $dbFile\n";
+    }
+
+    // Gerar
+    $generator = new Generator($pdo, $config, $check);
+    $generator->run();
+    
+} catch (Exception $e) {
+    echo "❌ Error: " . $e->getMessage() . "\n";
+
+    $error = $e->getMessage();
+    if (str_contains($error, 'DB_NAME') || str_contains($error, 'database name')) {
+        echo "\n💡 Tip: Set 'database.name' in " . $config->getConfigFile() . "\n";
+        echo "   Or use environment variable: export DB_NAME=your_database\n";
+    } elseif (str_contains($error, 'connection failed')) {
+        echo "\n💡 Tip: Check your database credentials in " . $config->getConfigFile() . "\n";
+        echo "   Make sure your database server is running.\n";
+    }
+
+    exit(1);
+}

@@ -1,0 +1,101 @@
+#!/usr/bin/env php
+<?php
+// bin/tbl-class-logs
+
+
+use Eril\TblClass\Logger;
+
+
+$autoloadPaths = [
+    __DIR__ . '/../../../autoload.php',
+    __DIR__ . '/../vendor/autoload.php',
+    dirname(__DIR__, 3) . '/autoload.php',
+];
+
+foreach ($autoloadPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        break;
+    }
+}
+
+if (!class_exists('Eril\\TblClass\\LogService')) {
+    die("❌ Autoload not found.\n");
+}
+
+// Help text
+$help = "tbl-class-logs - View Tbl-Class logs\n\n"
+    . "Usage:\n"
+    . "  tbl-class-logs          Show logs\n"
+    . "  tbl-class-logs --clear  Clear logs\n"
+    . "  tbl-class-logs --help   Show help\n";
+
+// Parse arguments
+$clear = false;
+$showHelp = false;
+
+foreach ($argv as $i => $arg) {
+    if ($i === 0) continue; // Skip script name
+
+    if ($arg === '--help' || $arg === '-h') {
+        $showHelp = true;
+    } elseif ($arg === '--clear') {
+        $clear = true;
+    } elseif ($arg[0] === '-') {
+        echo "❌ Unknown option: $arg\n\n";
+        echo $help;
+        exit(1);
+    }
+}
+
+// Show help if requested
+if ($showHelp) {
+    echo $help;
+    exit(0);
+}
+
+try {
+    $logService = new Logger();
+    $logFile = $logService->getLogPath();
+
+    // Clear mode
+    if ($clear) {
+        if (file_exists($logFile)) {
+            if (unlink($logFile)) {
+                echo "✅ Logs cleared\n";
+            } else {
+                echo "❌ Cannot clear logs\n";
+                exit(1);
+            }
+        } else {
+            echo "📭 No logs to clear\n";
+        }
+        exit(0);
+    }
+
+    // Check if log file exists
+    if (!file_exists($logFile)) {
+        echo "📭 Log file is empty\n";
+        exit(0);
+    }
+
+    // Read logs
+    $content = file_get_contents($logFile);
+    if ($content === false) {
+        echo "❌ Cannot read log file\n";
+        exit(1);
+    }
+
+    // Check if empty
+    $content = trim($content);
+    if (empty($content)) {
+        echo "📭 Log file is empty\n";
+        exit(0);
+    }
+
+    // Show logs
+    echo $content . "\n";
+} catch (Exception $e) {
+    echo "❌ Error: " . $e->getMessage() . "\n";
+    exit(1);
+}
