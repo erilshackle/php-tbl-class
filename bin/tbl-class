@@ -115,8 +115,10 @@ try {
         echo "✨ First run detected!\n";
         echo "✅ Config template created: " . $config->getConfigFile() . "\n\n";
 
-        echo "Please edit the config file with your database settings:\n";
-        echo "1. Set 'database.name' (for MySQL) or 'database.path' (for SQLite)\n";
+        echo "Please edit the config file with your database enviroment settings:\n";
+        echo "1. Set 'database:name' (for MySQL) or 'database:path' (for SQLite)\n";
+        echo "   -- If you are using .env just use the env variables.\n";
+        echo "   -- If you have an function or method that returns pdo use it in database:connection.\n";
         echo "2. Adjust other settings as needed\n";
         echo "3. Run 'tbl-class' again\n\n";
 
