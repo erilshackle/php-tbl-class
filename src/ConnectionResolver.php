@@ -35,23 +35,16 @@ class ConnectionResolver
     
     private static function createMysqlConnection(Config $config): PDO
     {
-        $dbName = $config->getDatabaseName();
-        if (!$dbName) {
-            throw new Exception("MySQL database name not configured");
-        }
-        
-        // Resolve placeholders like "DB_HOST"
-        $resolve = function($value) {
-            if (is_string($value) && preg_match('/^[A-Z_]+$/', $value)) {
-                return getenv($value) ?: $value;
-            }
-            return $value;
-        };
-        
-        $host = $resolve($config->get('database.host', 'localhost'));
-        $port = (int)$resolve($config->get('database.port', 3306));
-        $user = $resolve($config->get('database.user', 'root'));
-        $password = $resolve($config->get('database.password', ''));
+         $dbName = $config->getDatabaseName();
+    if (!$dbName) {
+        throw new Exception("MySQL database name not configured");
+    }
+    
+    // Config já resolve env vars automaticamente via get()
+    $host = $config->get('database.host', 'localhost');
+    $port = (int)$config->get('database.port', 3306);
+    $user = $config->get('database.user', 'root');
+    $password = $config->get('database.password', '');
         
         // DSN
         $dsn = "mysql:host=$host;port=$port;dbname=$dbName;charset=utf8mb4";
@@ -82,16 +75,6 @@ class ConnectionResolver
     private static function createSqliteConnection(Config $config): PDO
     {
         $path = $config->get('database.path', 'database.sqlite');
-        
-        // Resolve path (could be env var or absolute/relative path)
-        if (preg_match('/^[A-Z_]+$/', $path)) {
-            $path = getenv($path) ?: $path;
-        }
-        
-        // Make path absolute if relative
-        if (!str_starts_with($path, '/')) {
-            $path = getcwd() . '/' . $path;
-        }
         
         if (!file_exists($path)) {
             throw new Exception("SQLite database file not found: $path");
