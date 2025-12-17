@@ -13,6 +13,9 @@
 ---
 </div>
 
+![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4?style=for-the-badge&logo=php&logoColor=white) ![Version](https://img.shields.io/badge/Version-3.0.0-blue?style=for-the-badge)  ![Downloads](https://img.shields.io/packagist/dt/eril/tbl-class?style=for-the-badge&color=orange) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+
+
 | Status | License | Installation |
 | :--- | :--- | :--- |
 | Stable v3.0.0 | MIT | `composer require eril/tbl-class --dev` |
@@ -38,6 +41,8 @@ echo Tbl::users_email;  // 'email'
 ---
 
 ## ✨ Features
+
+
 
 * **Zero Runtime Dependencies** - Pure development tool, no production overhead
 * **Multi-Database Support** - MySQL & SQLite out of the box
@@ -97,6 +102,7 @@ tbl-class-logs --clear
 ---
 
 ## ⚙️ Configuration
+
 
 On first run, a `tblclass.yaml` file is created:
 
@@ -298,6 +304,7 @@ tbl-class/
 ---
 
 ## 🤝 Contributing
+![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen?style=for-the-badge)
 
 1. Fork the repository
 2. Create a feature branch
@@ -307,6 +314,7 @@ tbl-class/
 ---
 
 ## 📄 License
+![MIT License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
@@ -323,5 +331,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ---
 
 <div align="center">
+
+![Star](https://img.shields.io/github/stars/erilshackle/php-tbl-class?style=social) ![Fork](https://img.shields.io/github/forks/erilshackle/php-tbl-class?style=social) ![Watch](https://img.shields.io/github/watchers/erilshackle/php-tbl-class?style=social)
+
 <strong>Stop writing strings, start using constants! Tbl:: 🚀 </strong>
 </div>

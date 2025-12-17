@@ -1,14 +1,16 @@
 {
     "name": "eril/tbl-class",
-    "description": "CLI tool to generate Tbl class constants from MySQL schema",
-    "homepage": "https://github.com/erilshackle/php-tbl-schema-sync",
+    "description": "CLI tool to generate Tbl class constants from MySQL/SQLite schema",
+    "homepage": "https://github.com/erilshackle/php-tbl-class",
     "type": "library",
     "keywords": [
         "mysql",
+        "sqlite",
         "schema",
         "constants",
         "generator",
         "cli",
+        "database",
         "database-sync",
         "ci-cd"
     ],
@@ -22,8 +24,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/erilshackle/php-tbl-schema-sync/issues",
-        "source": "https://github.com/erilshackle/php-tbl-schema-sync"
+        "issues": "https://github.com/erilshackle/php-tbl-class/issues",
+        "source": "https://github.com/erilshackle/php-tbl-class"
     },
     "require": {
         "php": ">=8.1",
