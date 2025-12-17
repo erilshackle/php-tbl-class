@@ -42,8 +42,9 @@
         "bin/tbl-class-logs"
     ],
     "scripts": {
-        "tbl-class-generate": "@php\bin\tbl-class .",
-        "tbl-class-logs": "@php\bin\tbl-class-logs"
+        "tbl-class": "tbl-class",
+        "tbl-class-generate": "@tbl-class .",
+        "tbl-class-logs": "tbl-class-logs"
     },
     "suggest": {
         "ext-yaml": "For faster YAML parsing"
