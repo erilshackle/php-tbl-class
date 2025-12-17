@@ -33,15 +33,15 @@ class Config
 
             // Configuração mínima para funcionar
             $defaults = [
-                'database' => [
+            'database' => [
                     'driver' => 'mysql',
                     'connection' => null,
-                    'host' => 'DB_HOST',
-                    'port' => 'DB_PORT',
-                    'name' => 'DB_NAME',
-                    'user' => 'DB_USER',
-                    'password' => 'DB_PASS',
-                    'path' => 'database.sqlite'
+                    'host' => 'localhost',        // DEFAULT literal
+                    'port' => 3306,               // DEFAULT literal  
+                    'name' => '',                  // VAZIO - requerido
+                    'user' => 'root',              // DEFAULT literal
+                    'password' => '',              // DEFAULT vazio
+                    'path' => 'database.sqlite'   // DEFAULT literal
                 ],
                 'output' => [
                     'path' => './',
@@ -63,21 +63,20 @@ class Config
         $template = <<<YAML
 # Database configuration
 database:
-  # Optional custom connection:
+  ## Optional custom connection:
   # connection: 'App\\Database::getConnection'
 
   driver: mysql           # mysql or sqlite
   
-  # For MySQL:
-  host: DB_HOST
-  port: DB_PORT
-  name: DB_NAME           # required for MySQL
-  user: DB_USER
-  password: DB_PASS
+  # For MySQL (recomended to environment variables):
+  host: ${DB_HOST}        # or 'localhost'
+  port: ${DB_PORT}        # or 3306
+  name: ${DB_NAME}        # required for MySQL
+  user: ${DB_USER}        # or 'root'
+  password: ${DB_PASS}    # or ''
   
-  # For SQLite:
-  # driver: sqlite
-  # path: database.sqlite   # or DB_PATH env var
+  ## For SQLite (driver: sqlite)
+  # path: ${DB_PATH}      # or 'database.sqlite'
 
 # Output configuration  
 output:
