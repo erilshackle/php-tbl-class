@@ -131,6 +131,38 @@ YAML;
         return $yaml;
     }
 
+    /**
+ * Resolve environment variable placeholders
+ * Supports: DB_NAME, ${DB_NAME}, env(DB_NAME)
+ */
+public function resolveEnvVars($value)
+{
+    if (!is_string($value)) {
+        return $value;
+    }
+    
+    // Pattern para: DB_NAME, ${DB_NAME}, env(DB_NAME)
+    if (preg_match('/^\${\s*([A-Z_][A-Z0-9_]*)\s*}$/', $value, $matches)) {
+        // Formato: ${DB_NAME}
+        $envValue = getenv($matches[1]);
+        return $envValue !== false ? $envValue : $value;
+    }
+    
+    if (preg_match('/^env\(\s*([A-Z_][A-Z0-9_]*)\s*\)$/', $value, $matches)) {
+        // Formato: env(DB_NAME)
+        $envValue = getenv($matches[1]);
+        return $envValue !== false ? $envValue : $value;
+    }
+    
+    if (preg_match('/^[A-Z_][A-Z0-9_]*$/', $value)) {
+        // Formato: DB_NAME (apenas letras maiúsculas e underscore)
+        $envValue = getenv($value);
+        return $envValue !== false ? $envValue : $value;
+    }
+    
+    return $value;
+}
+
     public function get(string $key, $default = null)
     {
         $keys = explode('.', $key);
