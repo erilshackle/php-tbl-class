@@ -69,14 +69,14 @@ database:
   driver: mysql           # mysql or sqlite
   
   # For MySQL (recomended to environment variables):
-  host: ${DB_HOST}        # or 'localhost'
-  port: ${DB_PORT}        # or 3306
-  name: ${DB_NAME}        # required for MySQL
-  user: ${DB_USER}        # or 'root'
-  password: ${DB_PASS}    # or ''
+  host: \${DB_HOST}        # or 'localhost'
+  port: \${DB_PORT}        # or 3306
+  name: \${DB_NAME}        # required for MySQL
+  user: \${DB_USER}        # or 'root'
+  password: \${DB_PASS}    # or ''
   
   ## For SQLite (driver: sqlite)
-  # path: ${DB_PATH}      # or 'database.sqlite'
+  # path: \${DB_PATH}      # or 'database.sqlite'
 
 # Output configuration  
 output:
