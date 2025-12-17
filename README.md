@@ -188,10 +188,11 @@ jobs:
 ```json
 {
   "scripts": {
-    "db:generate": "tbl-class src/Models/",
-    "db:check": "tbl-class --check",
-    "db:sync": ["@db:check", "@db:generate"]
-  }
+    "tbl:class": "tbl-class",
+    "tbl:sync": ["@tbl:class", "@tbl:class --check"],
+    "tbl:logs": "tbl-class-logs",
+    "tbl-class-generate": "@tbl:class .",
+    }
 }
 ```
 

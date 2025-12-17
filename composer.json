@@ -1,6 +1,6 @@
 {
     "name": "eril/tbl-class",
-    "description": "CLI tool to generate Tbl class constants from MySQL/SQLite schema",
+    "description": "CLI tool to generate type-safe PHP constants from your MySQL/SQLite database schema. Tbl::class",
     "homepage": "https://github.com/erilshackle/php-tbl-class",
     "type": "library",
     "keywords": [
@@ -42,9 +42,13 @@
         "bin/tbl-class-logs"
     ],
     "scripts": {
-        "tbl-class": "tbl-class",
-        "tbl-class-generate": "@tbl-class .",
-        "tbl-class-logs": "tbl-class-logs"
+        "tbl:class": "tbl-class",
+        "tbl:sync": [
+            "@tbl:class",
+            "@tbl:class --check"
+        ],
+        "tbl:logs": "tbl-class-logs",
+        "tbl-class-generate": "@tbl:class ."
     },
     "suggest": {
         "ext-yaml": "For faster YAML parsing"
