@@ -8,7 +8,7 @@
 # 2. Arquivos Gerados pelo TblSchemaSync
 # ------------------------------------
 # O diretório de estado/log criado pelo Generator.
-/.tblschema/
+/.tblclass/
 
 # Os arquivos Tbl.php gerados pelos usuários (importante para evitar
 # que desenvolvedores versionem acidentalmente as constantes geradas em seus projetos).
@@ -32,4 +32,6 @@
 .vscode/
 *.log
 *.sqlite
+*.yaml
+*.yml
 /coverage/
