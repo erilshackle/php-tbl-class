@@ -4,15 +4,18 @@
     "homepage": "https://github.com/erilshackle/php-tbl-class",
     "type": "library",
     "keywords": [
+        "database-sync",
+        "type-safety",
+        "constants",
+        "generator",
         "mysql",
         "sqlite",
         "schema",
-        "constants",
-        "generator",
         "cli",
         "database",
-        "database-sync",
-        "ci-cd"
+        "ci-cd",
+        "development",
+        "tool"
     ],
     "license": "MIT",
     "authors": [
@@ -25,16 +28,25 @@
     ],
     "support": {
         "issues": "https://github.com/erilshackle/php-tbl-class/issues",
-        "source": "https://github.com/erilshackle/php-tbl-class"
+        "source": "https://github.com/erilshackle/php-tbl-class",
+        "docs": "https://github.com/erilshackle/php-tbl-class#readme"
     },
     "require": {
         "php": ">=8.1",
         "ext-pdo": "*",
-        "symfony/yaml": "^6.0"
+        "symfony/yaml": "^6.0 || ^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
     },
     "autoload": {
         "psr-4": {
             "Eril\\TblClass\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Eril\\TblClass\\Tests\\": "tests/"
         }
     },
     "bin": [
@@ -43,14 +55,30 @@
     ],
     "scripts": {
         "tbl:class": "tbl-class",
+        "tbl:global": "tbl-class --global",
+        "tbl:check": "tbl-class --check",
         "tbl:sync": [
             "@tbl:class",
             "@tbl:class --check"
         ],
         "tbl:logs": "tbl-class-logs",
-        "tbl-class-generate": "@tbl:class ."
+        "tbl-class-generate": "@tbl:class .",
+        "test": "phpunit",
+        "test:ci": "@tbl:class && @tbl:class --check"
     },
     "suggest": {
-        "ext-yaml": "For faster YAML parsing"
+        "ext-yaml": "For faster YAML parsing",
+        "vlucas/phpdotenv": "For .env file support"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "3.x-dev"
+        }
     }
 }

@@ -7,18 +7,19 @@
 <div>
   <code title="table"> Tbl::table</code> 
   <code title="column">Tbl::table_column</code>
-  <code style="font-size:small;opacity:0.4;" title="comming soon">Tbl::fk_table1_table2</code>
+  <code title="foreign key">Tbl::fk_table1_table2</code>
 </div>
 
 ---
 </div>
 
-![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4?style=for-the-badge&logo=php&logoColor=white) ![Version](https://img.shields.io/badge/Version-3.0.0-blue?style=for-the-badge)  ![Downloads](https://img.shields.io/packagist/dt/eril/tbl-class?style=for-the-badge&color=orange) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4?style=for-the-badge&logo=php&logoColor=white) ![Version](https://img.shields.io/badge/Version-3.1.0-blue?style=for-the-badge)   ![Downloads](https://img.shields.io/packagist/dt/eril/tbl-class?style=for-the-badge&color=orange) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 
-| Status | License | Installation |
-| :--- | :--- | :--- |
-| Stable v3.0.0 | MIT | `composer require eril/tbl-class --dev` |
+| version | install comand|
+| :------ |:------ |
+| stable |`composer require eril/tbl-class --dev` |
+| latest |`composer require eril/tbl-class:dev-main --dev` |
 
 ---
 
@@ -34,8 +35,9 @@ vendor/bintbl-class
 # Setup tblclass.yaml 
 
 # That's it! Constants ready to use:
-echo Tbl::users;        // 'users'
-echo Tbl::users_email;  // 'email'
+echo Tbl::users;          // 'users'
+echo Tbl::users_email;    // 'email'
+echo Tbl::fk_posts_users; // 'user_id'
 ```
 
 ---
@@ -43,14 +45,16 @@ echo Tbl::users_email;  // 'email'
 ## ✨ Features
 
 
-
 * **Zero Runtime Dependencies** - Pure development tool, no production overhead
 * **Multi-Database Support** - MySQL & SQLite out of the box
-* **CI/CD Ready** -  `--check` mode for pipeline integration
+* **CI/CD Ready** - `--check` mode with consistent hashing
 * **Simple Configuration** - Clean YAML config with sensible defaults
 * **Smart Connection** - Auto-detects .env, environment vars, or custom callbacks
 * **Namespace Support** - Generate namespaced or global classes
 * **Change Tracking** - Logs schema changes for audit trail
+* **Schema Hash Verification** - Detect real schema changes only
+* **Global Constants Mode** - Generate global `const` without class
+* **Foreign Key Support** - Auto-included foreign key constants
 
 ---
 
@@ -73,11 +77,15 @@ composer global require eril/tbl-class
 # Generate constants (creates config if missing)
 tbl-class
 
+
 # With custom output directory
 tbl-class src/Models/
 
 # With namespace
 tbl-class --namespace="App\Models"
+
+# Global mode - Generate global constants (tbl_constants.php)
+tbl-class --global
 
 # Check for schema changes (CI/CD)
 tbl-class --check
@@ -109,26 +117,27 @@ On first run, a `tblclass.yaml` file is created:
 ```yaml
 # Database configuration
 database:
-  # Optional custom connection:
+  # Optional custom PDO connection:
   # connection: 'App\Database::getConnection'
 
   driver: mysql           # mysql or sqlite
   
-  # For MySQL:
-  host: DB_HOST          # or 'localhost'
-  port: DB_PORT          # or 3306
-  name: DB_NAME          # required
-  user: DB_USER          # or 'root'
-  password: DB_PASS      # or ''
+  # For MySQL (recommended: use environment variables):
+  host: env(DB_HOST)      # or 'localhost'
+  port: env(DB_PORT)      # or 3306
+  name: env(DB_NAME)      # required
+  user: env(DB_USER)      # or 'root'
+  password: env(DB_PASS)  # or ''
   
   # For SQLite:
   # driver: sqlite
-  # path: database.sqlite   # or DB_PATH env var
+  # path: env(DB_PATH)      # or 'database.sqlite'
 
 # Output configuration  
 output:
   path: "./"              # Where to save Tbl.php
   namespace: ""           # PHP namespace (optional)
+  # If no namespace, global mode is used automatically
 ```
 > You can copy it and put on your project root, filename must be **"tblclass.yaml"**
 
@@ -206,12 +215,17 @@ jobs:
 
 // Use constants anywhere in your app
 $query = "SELECT * FROM " . Tbl::users . 
-         " WHERE " . Tbl::users_email . " = ?";
+         " WHERE " . Tbl::users_email . " = ?" .
+         " AND " . Tbl::fk_posts_users . " = ?";
 
 // Get autocomplete in your IDE
-echo Tbl::products;       // 'products'
-echo Tbl::products_price; // 'price'
-echo Tbl::orders;         // 'orders'
+echo Tbl::products;          // 'products'
+echo Tbl::products_price;    // 'price'
+echo Tbl::fk_orders_users;   // 'user_id'
+
+// Global mode (tbl_constants.php)
+echo tbl_users;              // 'users'
+echo tbl_fk_posts_users;     // 'user_id'
 ```
 
 ### Autoload Configuration:
@@ -234,9 +248,10 @@ Then run: `composer dump-autoload`
 namespace App\Models;
 
 /**
- * Database table constants
- * - Schema: my_database
- * - Date: 2024-01-15 10:30:15
+ * Database table constants Helper
+ * @source schema my_database
+ * @since 2025-12-15 17:24:59
+ * @auto-generated DO NOT EDIT THIS FILE MANUALLY
  */
 class Tbl
 {
@@ -250,6 +265,11 @@ class Tbl
     public const products = 'products';
     public const products_id = 'id';
     public const products_price = 'price';
+
+    // --- Foreign Keys ---
+
+    /** users.id → posts.user_id */
+    public const fk_posts_users = 'user_id';
 }
 ```
 
@@ -277,6 +297,12 @@ class Tbl
    # Check your .env or config file
    # Ensure database server is running
    ```
+4. **"Schema changed!" on every check**
+   ```bash
+   # v3.1.0+ has consistent hashing
+   # Run once to initialize state:
+   tbl-class
+   # Then check will work correctly
 
 ### Getting Help:
 ```bash
