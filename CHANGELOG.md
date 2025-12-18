@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2025-12-18
+
+### Added
+- Add GlobalGenerator and TableClassGenerator for schema constant generation
+- Add class existence check in showInstructions method
+- feat: final v3.0.0 release preparation
+
+### Changed
+- Enhance tbl-class functionality with global mode support and improved error handling
+- Escape variables in Config.php
+- Implement ensureGitignore to manage .gitignore file
+- Update database configuration defaults and comments
+- Simplify database connection configuration
+- Refactor get method in Config.php
+- Update Config.php
+- Revise config file prompts for database settings
+- Update installation command for tbl-class
+- docs: update CHANGELOG.md
+
 ## [3.0.1] - 2025-12-17
 
 ### Fixed
