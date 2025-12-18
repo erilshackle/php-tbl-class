@@ -1,5 +1,4 @@
 <?php
-// src/Generator.php
 
 namespace Eril\TblClass;
 
@@ -8,21 +7,23 @@ use Exception;
 
 class Generator
 {
-    private const CLASS_NAME = 'Tbl';
-    private const STATE_DIR = '.tblclass/';
-    private const STATE_FILE = 'state.ini';
-    private Logger $logService;
+    protected const CLASS_NAME = 'Tbl';
+    protected const STATE_DIR = '.tblclass/';
+    protected const STATE_FILE = 'state.ini';
+    protected Logger $logService;
 
-    private PDO $pdo;
-    private Config $config;
-    private bool $checkMode;
-    private string $dbName;
+    protected PDO $pdo;
+    protected Config $config;
+    protected bool $checkMode;
+    protected string $mode = 'class'; // 'class' ou 'global'
+    protected string $dbName;
 
-    public function __construct(PDO $pdo, Config $config, bool $checkMode = false)
+    public function __construct(PDO $pdo, Config $config, bool $checkMode = false, string $mode = 'class')
     {
         $this->pdo = $pdo;
         $this->config = $config;
         $this->checkMode = $checkMode;
+        $this->mode = $mode;
         $this->logService = new Logger();
         $this->dbName = $this->getDatabaseName();
 
@@ -35,7 +36,7 @@ class Generator
         $this->ensureGitignore();
     }
 
-    private function getDatabaseName(): string
+    protected function getDatabaseName(): string
     {
         $driver = $this->config->getDriver();
 
@@ -56,22 +57,55 @@ class Generator
         $tables = $this->fetchTables();
 
         if (empty($tables)) {
-            $this->logService->log('ERROR', 'NO_TABLES', 'No tables found');
+            $this->logService->log('ERROR', 'NO_TABLES', 'No tables found', '-');
             echo "🚫 No tables found in database\n";
             exit(1);
         }
 
-        $content = $this->generateClass($tables);
-        $hash = md5($content);
+        // SEMPRE buscar foreign keys
+        $foreignKeys = $this->getAllForeignKeys();
+
+        // Gerar conteúdo para arquivo
+        $content = $this->generateContent($tables, $foreignKeys);
+        
+        // Gerar hash apenas dos dados do schema (não do arquivo formatado)
+        $schemaData = $this->getSchemaDataForHash($tables, $foreignKeys);
+        $hash = md5(serialize($schemaData));
 
         if ($this->checkMode) {
             $this->checkSchema($hash);
         } else {
-            $this->generateFile($content, $hash, count($tables));
+            $this->generateFile($content, $hash, count($tables), count($foreignKeys));
         }
     }
 
-    private function fetchTables(): array
+    /**
+     * Extrai apenas os dados do schema para gerar hash consistente
+     * Sem timestamps, comentários ou formatação variável
+     */
+    protected function getSchemaDataForHash(array $tables, array $foreignKeys): array
+    {
+        $schemaData = [
+            'dbName' => $this->dbName,
+            'tables' => [],
+            'foreignKeys' => $foreignKeys
+        ];
+
+        foreach ($tables as $table) {
+            $columns = $this->getColumns($table);
+            if (!empty($columns)) {
+                $schemaData['tables'][$table] = $columns;
+            }
+        }
+
+        // Ordenar para consistência
+        ksort($schemaData['tables']);
+        sort($schemaData['foreignKeys']);
+
+        return $schemaData;
+    }
+
+    protected function fetchTables(): array
     {
         $driver = $this->config->getDriver();
 
@@ -99,7 +133,7 @@ class Generator
         return [];
     }
 
-    private function getColumns(string $table): array
+    protected function getColumns(string $table): array
     {
         $driver = $this->config->getDriver();
 
@@ -124,45 +158,59 @@ class Generator
         return [];
     }
 
-    private function generateClass(array $tables): string
+    protected function getAllForeignKeys(): array
     {
-        $namespace = $this->config->get('output.namespace');
+        $driver = $this->config->getDriver();
+        $foreignKeys = [];
 
-        $content = "<?php\n\n";
+        if ($driver === 'mysql') {
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    TABLE_NAME as from_table,
+                    COLUMN_NAME as from_column,
+                    REFERENCED_TABLE_NAME as to_table,
+                    REFERENCED_COLUMN_NAME as to_column
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = ?
+                AND REFERENCED_TABLE_NAME IS NOT NULL
+                ORDER BY TABLE_NAME, COLUMN_NAME
+            ");
+            $stmt->execute([$this->dbName]);
+            $foreignKeys = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } elseif ($driver === 'sqlite') {
+            $tables = $this->fetchTables();
 
-        if ($namespace) {
-            $content .= "namespace ". trim($namespace, '\\') .";\n\n";
+            foreach ($tables as $table) {
+                $stmt = $this->pdo->prepare("PRAGMA foreign_key_list(:table)");
+                $stmt->execute([':table' => $table]);
+                $fks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                foreach ($fks as $fk) {
+                    $foreignKeys[] = [
+                        'from_table' => $table,
+                        'from_column' => $fk['from'],
+                        'to_table' => $fk['table'],
+                        'to_column' => $fk['to']
+                    ];
+                }
+            }
+            
+            // Ordenar para consistência
+            usort($foreignKeys, function($a, $b) {
+                return strcmp($a['from_table'] . $a['from_column'], $b['from_table'] . $b['from_column']);
+            });
         }
 
-        $content .= "/**\n";
-        $content .= " * Database table constants\n";
-        $content .= " * - Schema: {$this->dbName}\n";
-        $content .= " * - Date: " . date('Y-m-d H:i:s') . "\n";
-        $content .= " */\n";
-        $content .= "class " . self::CLASS_NAME . "\n{\n";
-
-        foreach ($tables as $table) {
-            $columns = $this->getColumns($table);
-
-            if (empty($columns)) {
-                continue;
-            }
-
-            $prefix = strtolower($table);
-            $content .= "\n    // Table: $table\n";
-            $content .= "    public const $prefix = '$table';\n";
-
-            foreach ($columns as $column) {
-                $const = $prefix . '_' . strtolower($column);
-                $content .= "    public const $const = '$column';\n";
-            }
-        }
-
-        $content .= "}\n";
-        return $content;
+        return $foreignKeys;
     }
 
-    private function checkSchema(string $currentHash): void
+    protected function generateContent(array $tables, array $foreignKeys = []): string
+    {
+        // Método abstrato para classes filhas
+        return '';
+    }
+
+    protected function checkSchema(string $currentHash): void
     {
         $stateFile = $this->getStateFile();
 
@@ -175,7 +223,7 @@ class Generator
         }
 
         if ($savedHash === $currentHash) {
-            $this->logService->log('CHECK', $currentHash, 'UNCHANGED');
+            $this->logService->log('CHECK', $currentHash, 'UNCHANGED', $this->dbName);
             echo "✅ Schema unchanged\n";
             exit(0);
         }
@@ -193,24 +241,27 @@ class Generator
         file_put_contents($stateFile, $content);
 
         if (empty($savedHash)) {
-            $this->logService->log('CHECK', $currentHash, 'INITIAL');
+            $this->logService->log('CHECK', $currentHash, 'INITIAL', $this->dbName);
             echo "📝 Initial schema snapshot saved\n";
         } else {
-            $this->logService->log('CHECK', $currentHash, 'CHANGED');
+            $this->logService->log('CHECK', $currentHash, 'CHANGED', $this->dbName);
             echo "❌ Schema changed!\n";
         }
         exit(1);
     }
 
-    private function generateFile(string $content, string $hash, int $tableCount): void
+    protected function generateFile(string $content, string $hash, int $tableCount, int $fkCount = 0): void
     {
-        $outputFile = $this->config->getOutputFile();
+        $outputFile = $this->config->getOutputFile($this->mode);
 
         if (file_put_contents($outputFile, $content)) {
-            $this->logService->log('GENERATE', $hash, 'OK');
+            $this->logService->log('GENERATE', $hash, 'OK', $this->dbName);
 
             echo "✅ Generated: $outputFile\n";
             echo "   Tables: $tableCount\n";
+            if ($fkCount > 0) {
+                echo "   Foreign Keys: $fkCount\n";
+            }
             echo "   Database: {$this->dbName}\n";
 
             // Save state
@@ -227,58 +278,67 @@ class Generator
 
             $this->showInstructions();
         } else {
-            $this->logService->log('ERROR', 'WRITE_FAILED', $outputFile);
+            $this->logService->log('ERROR', 'WRITE_FAILED', $outputFile, $this->dbName);
             throw new Exception("Failed to write: $outputFile");
         }
     }
 
-    private function showInstructions(): void
+    protected function showInstructions(): void
     {
-        // Verificar se a classe Tbl já existe
-        if (class_exists('Tbl') || ($this->config->get('output.namespace') && class_exists($this->config->get('output.namespace') . '\\Tbl'))) {
-            // Classe já carregada, não precisa mostrar instruções
-            return;
+        // Verificar se a classe Tbl já existe (apenas modo class)
+        if ($this->mode === 'class') {
+            $className = $this->config->get('output.namespace') ?
+                trim($this->config->get('output.namespace'), '\\') . '\\Tbl' : 'Tbl';
+
+            if (class_exists($className)) {
+                return;
+            }
         }
         
         $namespace = $this->config->get('output.namespace');
-        $outputFile = $this->config->getOutputFile();
+        $outputFile = $this->config->getOutputFile($this->mode);
         $relativePath = str_replace(getcwd() . '/', '', $outputFile);
-    
-        echo "\n📚 Autoload setup:\n\n";
-    
-        if ($namespace) {
-            echo "   // composer.json\n";
+
+        sleep(1.5);
+        echo "\n💡 To use Tbl globally, add to composer.json:\n";
+
+        if ($this->mode === 'class' && $namespace) {
             echo "   \"autoload\": {\n";
             echo "       \"psr-4\": {\n";
             echo "           \"$namespace\\\\\": \"" . dirname($relativePath) . "\"\n";
             echo "       }\n";
-            echo "   }\n";
         } else {
-            echo "   // composer.json\n";
             echo "   \"autoload\": {\n";
             echo "       \"files\": [\"$relativePath\"]\n";
             echo "   }\n";
         }
-    
-        echo "\n   Then: composer dump-autoload\n";
-        echo str_repeat('-', 50) . "\n";
+
+        echo "\n   Then run: composer dump-autoload\n";
+        echo str_repeat('-', 50) . "\r";
     }
 
-    private function getStateFile(): string
+    protected function getStateFile(): string
     {
-        return getcwd() . '/' . self::STATE_DIR . self::STATE_FILE;
+        $stateFile = self::STATE_FILE;
+
+        // State files diferentes por modo
+        if ($this->mode === 'global') {
+            $stateFile = 'global_' . $stateFile;
+        }
+
+        return getcwd() . '/' . self::STATE_DIR . $stateFile;
     }
 
     private function ensureGitignore(): void
     {
         $gitignorePath = getcwd() . '/' . self::STATE_DIR . '/.gitignore';
-        
+
         if (!file_exists($gitignorePath)) {
             $dir = dirname($gitignorePath);
             if (!is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
-            
+
             $content = "# Generated by tbl-class\n# Ignore all files in this directory\n*\n!.gitignore\n";
             file_put_contents($gitignorePath, $content);
         }

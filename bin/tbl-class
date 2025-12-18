@@ -4,16 +4,17 @@
 
 use Eril\TblClass\Config;
 use Eril\TblClass\ConnectionResolver;
-use Eril\TblClass\Generator;
+use Eril\TblClass\TableClassGenerator;
+use Eril\TblClass\GlobalGenerator;
 
-$quickHelp = "tbl-class - Generate Tbl class constants\n"
+$quickHelp = "tbl-class - Generate database constants\n"
     . "Usage: tbl-class [<output>] [options]\n"
-    . "       tbl-class --config[=<file>]\n"
+    . "       tbl-class --config\n"
     . "       tbl-class --check\n"
     . "       tbl-class --help\n";
 
 $fullHelp = <<<HELP
-tbl-class - Generate Tbl class constants from database
+tbl-class - Generate database table constants
 
 Usage:
   tbl-class [<output>] [options]
@@ -26,25 +27,33 @@ Arguments:
 
 Options:
   --check         Check mode for CI/CD (exit 0=unchanged, 1=changed)
+  --global        Generate global constants (tbl_constants.php)
   --namespace=<ns> PHP namespace for Tbl class
-  --config         Generates the config file
+  --config         Show config file
   --help          Show this help
 
 Examples:
-  tbl-class                    # Generate constants
-  tbl-class src/Models/        # Output to directory
+  tbl-class                    # Generate Tbl class with namespace
+  tbl-class --global          # Generate global constants
   tbl-class --check           # Check for schema changes
   tbl-class --config          # Show config file
+
+Modes:
+  Normal mode:     Creates a Tbl class in specified namespace
+  Global mode:     Creates global constants (tbl_constants.php)
+
+Note: Foreign keys are always included when found in database
 
 HELP;
 
 // Parse args
-$output = null; // null = não especificado
+$output = null;
 $check = false;
 $namespace = null;
 $configFile = null;
 $configMode = false;
 $showHelp = false;
+$globalMode = false;
 
 for ($i = 1; $i < count($argv); $i++) {
     $arg = $argv[$i];
@@ -53,13 +62,15 @@ for ($i = 1; $i < count($argv); $i++) {
         $showHelp = true;
     } elseif ($arg === '--check') {
         $check = true;
-    } elseif ($arg === '--config') {
-        $configMode = true;
+    } elseif ($arg === '--global') {
+        $globalMode = true;
+    } elseif (str_starts_with($arg, '--namespace=')) {
+        $namespace = substr($arg, 12);
     } elseif (str_starts_with($arg, '--config=')) {
         $configMode = true;
         $configFile = substr($arg, 9);
-    } elseif (str_starts_with($arg, '--namespace=')) {
-        $namespace = substr($arg, 12);
+    } elseif ($arg === '--config') {
+        $configMode = true;
     } elseif ($arg[0] !== '-') {
         $output = $arg;
     } else {
@@ -107,7 +118,7 @@ if ($configMode) {
     exit(0);
 }
 
-// Main execution - SEM VERIFICAÇÃO DE ARGUMENTOS VAZIOS
+// Main execution
 try {
     $config = new Config($configFile);
 
@@ -115,10 +126,10 @@ try {
         echo "✨ First run detected!\n";
         echo "✅ Config template created: " . $config->getConfigFile() . "\n\n";
 
-        echo "Please edit the config file with your database enviroment settings:\n";
+        echo "Please edit the config file with your database environment settings:\n";
         echo "1. Set 'database:name' (for MySQL) or 'database:path' (for SQLite)\n";
         echo "   -- If you are using .env just use the env variables.\n";
-        echo "   -- If you have an function or method that returns pdo use it in database:connection.\n";
+        echo "   -- If you have an function or method that returns PDO use it in database:connection.\n";
         echo "2. Adjust other settings as needed\n";
         echo "3. Run 'tbl-class' again\n\n";
 
@@ -150,32 +161,42 @@ try {
     if ($output) {
         $config->set('output.path', $output);
     }
-    // Se $output for null, usa do YAML ou default
 
     // Conectar
     $pdo = ConnectionResolver::fromConfig($config);
 
     // Mensagem de conexão
+    $driver = $config->getDriver();
     if ($driver === 'mysql') {
+        $dbName = $config->getDatabaseName();
         echo "📦 Connected to MySQL database: $dbName\n";
     } else {
+        $dbPath = $config->get('database.path');
         $dbFile = basename($dbPath);
         echo "📦 Connected to SQLite database: $dbFile\n";
     }
 
-    // Gerar
-    $generator = new Generator($pdo, $config, $check);
+    // Determinar qual gerador usar
+    if ($globalMode) {
+        // Modo Global: Sempre inclui tabelas e FKs
+        $generator = new GlobalGenerator($pdo, $config, $check);
+        echo "🌍 Mode: Global constants (tables + foreign keys)\n";
+    } else {
+        // Modo Normal: Classe Tbl (com namespace se configurado)
+        $generator = new TableClassGenerator($pdo, $config, $check);
+        echo "🏗️  Mode: Tbl class (tables + foreign keys)\n";
+    }
+
     $generator->run();
-    
 } catch (Exception $e) {
     echo "❌ Error: " . $e->getMessage() . "\n";
 
     $error = $e->getMessage();
     if (str_contains($error, 'DB_NAME') || str_contains($error, 'database name')) {
-        echo "\n💡 Tip: Set 'database.name' in " . $config->getConfigFile() . "\n";
+        echo "\n💡 Tip: Set 'database.name' in " . $config->getConfigFile() . ':11' .  "\n";
         echo "   Or use environment variable: export DB_NAME=your_database\n";
     } elseif (str_contains($error, 'connection failed')) {
-        echo "\n💡 Tip: Check your database credentials in " . $config->getConfigFile() . "\n";
+        echo "\n💡 Tip: Check your database credentials in " . $config->getConfigFile() . '13' . "\n";
         echo "   Make sure your database server is running.\n";
     }
 

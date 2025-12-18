@@ -11,6 +11,7 @@ class Config
     private array $config = [];
     private string $configFile;
     private bool $isNew = false;
+    private ?string $customOutputFile = null;
 
     public function __construct(?string $configFile = null)
     {
@@ -33,7 +34,7 @@ class Config
 
             // Configuração mínima para funcionar
             $defaults = [
-            'database' => [
+                'database' => [
                     'driver' => 'mysql',
                     'connection' => null,
                     'host' => 'localhost',        // DEFAULT literal
@@ -53,7 +54,7 @@ class Config
             $this->config = array_replace_recursive($defaults, $yamlConfig);
 
             $this->isNew = false;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new Exception("Error parsing YAML config: " . $e->getMessage());
         }
     }
@@ -68,15 +69,15 @@ database:
 
   driver: mysql           # mysql or sqlite
   
-  # For MySQL (recomended to environment variables):
-  host: \${DB_HOST}        # or 'localhost'
-  port: \${DB_PORT}        # or 3306
-  name: \${DB_NAME}        # required for MySQL
-  user: \${DB_USER}        # or 'root'
-  password: \${DB_PASS}    # or ''
+  # For MySQL (use environment variables):
+  host: env(DB_HOST)      # or 'localhost'
+  port: env(DB_PORT)      # or 3306
+  name: env(DB_NAME)      # required for MySQL
+  user: env(DB_USER)      # or 'root'
+  password: env(DB_PASS)  # or ''
   
   ## For SQLite (driver: sqlite)
-  # path: \${DB_PATH}      # or 'database.sqlite'
+  # path: env(DB_PATH)    # or 'database.sqlite'
 
 # Output configuration  
 output:
@@ -131,52 +132,51 @@ YAML;
     }
 
     /**
- * Resolve environment variable placeholders
- * Supports: DB_NAME, ${DB_NAME}, env(DB_NAME)
- */
-public function resolveEnvVars($value)
-{
-    if (!is_string($value)) {
+     * Resolve environment variable placeholders
+     * Supports: DB_NAME, ${DB_NAME}, env(DB_NAME)
+     */
+    public function resolveEnvVars($value)
+    {
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        // Pattern para: env(DB_NAME)
+        if (preg_match('/^env\(\s*([A-Z_][A-Z0-9_]*)\s*\)$/', $value, $matches)) {
+            $envValue = getenv($matches[1]);
+            return $envValue !== false ? $envValue : $value;
+        }
+
+        // Pattern para: ${DB_NAME}
+        if (preg_match('/^\${\s*([A-Z_][A-Z0-9_]*)\s*}$/', $value, $matches)) {
+            $envValue = getenv($matches[1]);
+            return $envValue !== false ? $envValue : $value;
+        }
+
+        if (preg_match('/^[A-Z_][A-Z0-9_]*$/', $value)) {
+            // Formato: DB_NAME (apenas letras maiúsculas e underscore)
+            $envValue = getenv($value);
+            return $envValue !== false ? $envValue : $value;
+        }
+
         return $value;
     }
-    
-    // Pattern para: DB_NAME, ${DB_NAME}, env(DB_NAME)
-    if (preg_match('/^\${\s*([A-Z_][A-Z0-9_]*)\s*}$/', $value, $matches)) {
-        // Formato: ${DB_NAME}
-        $envValue = getenv($matches[1]);
-        return $envValue !== false ? $envValue : $value;
-    }
-    
-    if (preg_match('/^env\(\s*([A-Z_][A-Z0-9_]*)\s*\)$/', $value, $matches)) {
-        // Formato: env(DB_NAME)
-        $envValue = getenv($matches[1]);
-        return $envValue !== false ? $envValue : $value;
-    }
-    
-    if (preg_match('/^[A-Z_][A-Z0-9_]*$/', $value)) {
-        // Formato: DB_NAME (apenas letras maiúsculas e underscore)
-        $envValue = getenv($value);
-        return $envValue !== false ? $envValue : $value;
-    }
-    
-    return $value;
-}
 
     public function get(string $key, $default = null)
-{
-    $keys = explode('.', $key);
-    $value = $this->config;
-    
-    foreach ($keys as $k) {
-        if (!isset($value[$k])) {
-            return $default;
+    {
+        $keys = explode('.', $key);
+        $value = $this->config;
+
+        foreach ($keys as $k) {
+            if (!isset($value[$k])) {
+                return $default;
+            }
+            $value = $value[$k];
         }
-        $value = $value[$k];
+
+        // Resolve environment variables before returning
+        return $this->resolveEnvVars($value);
     }
-    
-    // Resolve environment variables before returning
-    return $this->resolveEnvVars($value);
-}
 
     public function set(string $key, $value): self
     {
@@ -204,9 +204,39 @@ public function resolveEnvVars($value)
         return rtrim($this->get('output.path', './'), '/') . '/';
     }
 
-    public function getOutputFile(): string
+    public function getOutputFile(string $mode = 'class'): string
     {
-        return $this->getOutputPath() . 'Tbl.php';
+        // Se foi definido um arquivo personalizado, usa ele
+        if ($this->customOutputFile !== null) {
+            return $this->getOutputPath() . $this->customOutputFile;
+        }
+
+        switch ($mode) {
+            case 'global':
+                return $this->getOutputPath() . 'tbl_constants.php';
+            default:
+                // class mode
+                return $this->getOutputPath() . 'Tbl.php';
+        }
+    }
+
+    /**
+     * Define um nome de arquivo personalizado para a saída
+     * Útil para GlobalGenerator que precisa de arquivo diferente
+     */
+    public function setOutputFile(string $filename): self
+    {
+        $this->customOutputFile = $filename;
+        return $this;
+    }
+
+    /**
+     * Reseta o nome do arquivo de saída para o padrão
+     */
+    public function resetOutputFile(): self
+    {
+        $this->customOutputFile = null;
+        return $this;
     }
 
     public function hasConnectionCallback(): bool
@@ -241,5 +271,10 @@ public function resolveEnvVars($value)
     public function getConfigFile(): string
     {
         return $this->configFile;
+    }
+
+    public function getConfigFileName(): string
+    {
+        return $this->configFile ? basename($this->configFile) : '';
     }
 }
