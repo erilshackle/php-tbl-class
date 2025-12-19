@@ -109,7 +109,7 @@ class NamingResolver
         // Tenta caminhos possíveis:
         $possiblePaths = [
             // 1. No diretório data do package (vendor)
-            dirname(__DIR__, 3) . '/data/' . $filename,
+            dirname(__DIR__, 2) . '/data/' . $filename,
             // 2. No diretório atual do projeto (para desenvolvimento)
             getcwd() . '/data/' . $filename,
             // 3. No diretório do composer
@@ -268,49 +268,5 @@ class NamingResolver
     public function reset(): void
     {
         $this->usedNames = [];
-    }
-
-    /**
-     * Método auxiliar para debugging - mostra dicionários carregados
-     */
-    public function debugLoadedDictionaries(): array
-    {
-        $loaded = [];
-
-        // Verifica dicionário do usuário
-        $userPath = $this->config['abbreviation']['dictionary_path'] ?? null;
-        if ($userPath) {
-            $fullPath = getcwd() . '/' . ltrim($userPath, '/');
-            $loaded['user'] = [
-                'path' => $fullPath,
-                'exists' => file_exists($fullPath)
-            ];
-        }
-
-        // Verifica linguagem configurada
-        $lang = $this->config['abbreviation']['dictionary_lang'] ?? 'en';
-        $loaded['config'] = [
-            'dictionary_lang' => $lang,
-            'languages_to_load' => ($lang === 'all') ? 'all' : [$lang]
-        ];
-
-        // Verifica dicionários base
-        $langsToCheck = ($lang === 'all')
-            ? array_keys(self::DICTIONARY_FILES)
-            : [$lang];
-
-        foreach ($langsToCheck as $language) {
-            if (isset(self::DICTIONARY_FILES[$language])) {
-                $filename = self::DICTIONARY_FILES[$language];
-                $path = $this->findDictionaryPath($filename);
-                $loaded['base'][$language] = [
-                    'filename' => $filename,
-                    'path' => $path,
-                    'exists' => $path && file_exists($path)
-                ];
-            }
-        }
-
-        return $loaded;
     }
 }
