@@ -49,7 +49,7 @@ class TableClassGenerator extends Generator
 
         // SEMPRE incluir FKs se existirem
         if (!empty($foreignKeys)) {
-            $content .= "\n    // --- Foreign Keys ---\n";
+            $content .= "\n    // --- Foreign Keys ---\n\n";
 
             foreach ($foreignKeys as $fk) {
                 // CORREÇÃO AQUI: Usa NamingResolver para obter o nome da constante FK
