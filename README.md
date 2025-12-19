@@ -373,23 +373,6 @@ class Tbl
     ```
 ---
 
-## 📁 Project Structure
-
-```
-tbl-class/
-├── bin/
-│   ├── tbl-class          # Main generator
-│   └── tbl-class-logs     # Log viewer
-├── src/
-│   ├── Config.php         # YAML configuration
-│   ├── ConnectionResolver.php # Database connections
-│   ├── Generator.php      # Constants generator
-│   └── Logger.php         # Logging system
-└── .tblclass/             # State and logs directory
-```
-
----
-
 ## 🤝 Contributing
 ![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-brightgreen?style=for-the-badge)
 
