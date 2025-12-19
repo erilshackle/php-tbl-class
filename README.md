@@ -18,13 +18,14 @@
 </div>
 
 
+---
 
 | version | install comand|
 | :------ |:------ |
 | stable |`composer require eril/tbl-class --dev` |
 | latest |`composer require eril/tbl-class:dev-main --dev` |
 
----
+
 
 ## 🚀 Quick Start
 
