@@ -30,7 +30,7 @@
 composer require eril/tbl-class --dev
 
 # Generate constants
-vendor/bintbl-class
+vendor/bin/tbl-class
 
 # Setup tblclass.yaml 
 
