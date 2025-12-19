@@ -3,7 +3,7 @@
 // bin/tbl-class
 
 use Eril\TblClass\Config;
-use Eril\TblClass\ConnectionResolver;
+use Eril\TblClass\Resolvers\ConnectionResolver;
 use Eril\TblClass\TableClassGenerator;
 use Eril\TblClass\GlobalGenerator;
 
@@ -182,6 +182,7 @@ try {
         $generator = new GlobalGenerator($pdo, $config, $check);
         echo "🌍 Mode: Global constants (tables + foreign keys)\n";
     } else {
+
         // Modo Normal: Classe Tbl (com namespace se configurado)
         $generator = new TableClassGenerator($pdo, $config, $check);
         echo "🏗️  Mode: Tbl class (tables + foreign keys)\n";

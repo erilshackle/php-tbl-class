@@ -2,6 +2,7 @@
 
 namespace Eril\TblClass;
 
+use Eril\TblClass\Resolvers\NamingResolver;
 use PDO;
 use Exception;
 
@@ -11,6 +12,7 @@ class Generator
     protected const STATE_DIR = '.tblclass/';
     protected const STATE_FILE = 'state.ini';
     protected Logger $logService;
+    protected NamingResolver $namingResolver;
 
     protected PDO $pdo;
     protected Config $config;
@@ -26,6 +28,7 @@ class Generator
         $this->mode = $mode;
         $this->logService = new Logger();
         $this->dbName = $this->getDatabaseName();
+        $this->namingResolver = new NamingResolver($config->getNamingConfig());
 
         // Ensure output directory exists
         $outputDir = $config->getOutputPath();
@@ -67,7 +70,7 @@ class Generator
 
         // Gerar conteúdo para arquivo
         $content = $this->generateContent($tables, $foreignKeys);
-        
+
         // Gerar hash apenas dos dados do schema (não do arquivo formatado)
         $schemaData = $this->getSchemaDataForHash($tables, $foreignKeys);
         $hash = md5(serialize($schemaData));
@@ -194,10 +197,12 @@ class Generator
                     ];
                 }
             }
-            
+
             // Ordenar para consistência
-            usort($foreignKeys, function($a, $b) {
-                return strcmp($a['from_table'] . $a['from_column'], $b['from_table'] . $b['from_column']);
+            usort($foreignKeys, function ($a, $b) {
+                $keyA = $a['from_table'] . '|' . $a['from_column'] . '|' . $a['to_table'];
+                $keyB = $b['from_table'] . '|' . $b['from_column'] . '|' . $b['to_table'];
+                return strcmp($keyA, $keyB);
             });
         }
 
@@ -294,12 +299,11 @@ class Generator
                 return;
             }
         }
-        
+
         $namespace = $this->config->get('output.namespace');
         $outputFile = $this->config->getOutputFile($this->mode);
         $relativePath = str_replace(getcwd() . '/', '', $outputFile);
 
-        sleep(1.5);
         echo "\n💡 To use Tbl globally, add to composer.json:\n";
 
         if ($this->mode === 'class' && $namespace) {

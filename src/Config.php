@@ -83,6 +83,18 @@ database:
 output:
   path: "./"              # Where to save Tbl.php
   namespace: ""           # PHP namespace (optional)
+  
+  # Naming strategies for constants (full, abbr, smart)
+  naming:
+    table: "full"         # full, abbr, smart
+    column: "abbr"        # full, abbr, smart  
+    foreign_key: "smart"  # full, abbr, smart
+    
+    # Abbreviation settings
+    abbreviation:
+      dictionary_lang: "pt"    # 'en', 'pt', ou 'all'
+      dictionary_path: null    # custom dictionary path (relative to project)
+      max_length: 20           # max abbreviation length
 
 YAML;
 
@@ -194,6 +206,20 @@ YAML;
         return $this;
     }
 
+    public function getNamingConfig(): array
+    {
+        return [
+            'table' => $this->get('output.naming.table', 'full'),
+            'column' => $this->get('output.naming.column', 'abbr'),
+            'foreign_key' => $this->get('output.naming.foreign_key', 'smart'),
+            'abbreviation' => [
+                'dictionary_path' => $this->get('output.naming.abbreviation.dictionary_path'),
+                'dictionary_lang' => $this->get('output.naming.abbreviation.dictionary_lang', 'en'),
+                'max_length' => $this->get('output.naming.abbreviation.max_length', 20),
+            ],
+        ];
+    }
+
     public function getDatabaseName(): string
     {
         return $this->get('database.name', '');
@@ -265,7 +291,7 @@ YAML;
 
     public function getDriver(): string
     {
-        return $this->get('database.driver', 'mysql');
+        return (string) $this->get('database.driver', 'mysql');
     }
 
     public function getConfigFile(): string
