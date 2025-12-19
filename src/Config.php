@@ -92,7 +92,7 @@ output:
     
     # Abbreviation settings
     abbreviation:
-      dictionary_lang: "pt"    # 'en', 'pt', ou 'all'
+      dictionary_lang: "en"    # 'en', 'pt', ou 'all'
       dictionary_path: null    # custom dictionary path (relative to project)
       max_length: 20           # max abbreviation length
 
