@@ -1,8 +1,9 @@
 <?php
 // src/ConnectionResolver.php
 
-namespace Eril\TblClass;
+namespace Eril\TblClass\Resolvers;
 
+use Eril\TblClass\Config;
 use PDO;
 use PDOException;
 use Exception;
