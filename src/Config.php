@@ -87,7 +87,7 @@ output:
   # Naming strategies for constants (full, abbr, smart)
   naming:
     table: "full"         # full, abbr, smart
-    column: "abbr"        # full, abbr, smart  
+    column: "full"        # full, abbr, smart  
     foreign_key: "smart"  # full, abbr, smart
     
     # Abbreviation settings

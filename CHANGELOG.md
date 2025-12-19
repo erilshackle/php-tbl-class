@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2025-12-19
+
+### Added
+- feat: enhance naming strategies and improve constant generation in tbl-class
+- feat: add Portuguese dictionary and naming resolver for table abbreviations
+
+### Changed
+- chore: move ConnectionResolver.php to src/Resolvers update tbl-class
+- Update README and composer.json for enhanced documentation and dependency management
+
 ## [3.1.0] - 2025-12-18
 
 ### Added

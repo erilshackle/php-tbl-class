@@ -13,7 +13,7 @@
 ---
 </div>
 
-![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4?style=for-the-badge&logo=php&logoColor=white) ![Version](https://img.shields.io/badge/Version-3.1.0-blue?style=for-the-badge)   ![Downloads](https://img.shields.io/packagist/dt/eril/tbl-class?style=for-the-badge&color=orange) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4?style=for-the-badge&logo=php&logoColor=white)  ![Version](https://img.shields.io/badge/Version-3.1.0-blue?style=for-the-badge)  ![Downloads](https://img.shields.io/packagist/dt/eril/tbl-class?style=for-the-badge&color=orange) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 
 | version | install comand|
@@ -55,6 +55,9 @@ echo Tbl::fk_posts_users; // 'user_id'
 * **Schema Hash Verification** - Detect real schema changes only
 * **Global Constants Mode** - Generate global `const` without class
 * **Foreign Key Support** - Auto-included foreign key constants
+* **Smart Naming Strategies** - `full`, `abbr`, `smart` modes for table/column/FK names
+* **Multi-language Dictionary** - Built-in English/Portuguese abbreviation dictionaries
+* **Custom Dictionaries** - Add your own abbreviation rules
 
 ---
 
@@ -133,11 +136,22 @@ database:
   # driver: sqlite
   # path: env(DB_PATH)      # or 'database.sqlite'
 
-# Output configuration  
+# Output configuration 
 output:
   path: "./"              # Where to save Tbl.php
   namespace: ""           # PHP namespace (optional)
-  # If no namespace, global mode is used automatically
+  
+  # NEW: Naming strategies for constants (full, abbr, smart)
+  naming:
+    table: "full"         # full, abbr, smart
+    column: "full"        # full, abbr, smart  
+    foreign_key: "smart"  # full, abbr, smart
+    
+    # Abbreviation settings
+    abbreviation:
+      dictionary_path: null   # custom dictionary path (relative to project)
+      dictionary_lang: "en"   # 'en', 'pt', or 'all'
+      max_length: 20          # max abbreviation length
 ```
 > You can copy it and put on your project root, filename must be **"tblclass.yaml"**
 
@@ -226,6 +240,19 @@ echo Tbl::fk_orders_users;   // 'user_id'
 // Global mode (tbl_constants.php)
 echo tbl_users;              // 'users'
 echo tbl_fk_posts_users;     // 'user_id'
+
+// With 'abbr' strategy (using built-in dictionary):
+echo Tbl::usr;           // 'usuarios' (abbreviated)
+echo Tbl::usr_email;     // 'email'
+echo Tbl::fk_usr_prof;   // 'profissional_id'
+
+// With 'smart' strategy (abbreviates only long names):
+echo Tbl::users;         // 'users' (short, keeps full)
+echo Tbl::configuracoes; // 'cfg' (long, abbreviates)
+
+// With 'full' strategy (original behavior):
+echo Tbl::usuarios;      // 'usuarios'
+echo Tbl::usuarios_id;   // 'id'
 ```
 
 ### Autoload Configuration:
@@ -233,11 +260,43 @@ After generation, add to `composer.json`:
 ```json
 {
   "autoload": {
-    "files": ["src/Models/Tbl.php"]
+    "files": ["path/To/Tbl.php"]
   }
 }
 ```
 Then run: `composer dump-autoload`
+
+---
+
+## 📚 Dictionary System
+
+Tbl-class includes *built-in* abbreviation dictionaries:
+```php
+// example
+return [
+    'user' => 'usr',
+    'customer' => 'cust',
+    'product' => 'prod',
+    // ...
+];
+```
+
+### Custom Dictionary
+Create **data/my_dict.php** in your project:
+
+```php
+return [
+    'minha_tabela' => 'mytbl',
+    'outra_tabela' => 'otbl',
+];
+```
+| <small>Then reference in config:</small>
+```yaml
+abbreviation:
+  dictionary_path: "data/my_dict.php"
+```
+_filepath can be anywhere you like in your project._
+
 
 ---
 
@@ -303,14 +362,13 @@ class Tbl
    # Run once to initialize state:
    tbl-class
    # Then check will work correctly
-
-### Getting Help:
-```bash
-# Show all options
-tbl-class --help
-tbl-class-logs --help
-```
-
+   ```
+* ### Getting Help
+    ```bash
+    # Show all options
+    tbl-class --help
+    tbl-class-logs --help
+    ```
 ---
 
 ## 📁 Project Structure
