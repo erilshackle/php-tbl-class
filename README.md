@@ -8,12 +8,15 @@
   <code title="table"> Tbl::table</code> 
   <code title="column">Tbl::table_column</code>
   <code title="foreign key">Tbl::fk_table1_table2</code>
+  <code title="foreign key">Tbl::abbr1_abbr2</code>
 </div>
 
----
-</div>
+<br>
 
 ![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4?style=for-the-badge&logo=php&logoColor=white)  ![Version](https://img.shields.io/badge/Version-3.1.0-blue?style=for-the-badge)  ![Downloads](https://img.shields.io/packagist/dt/eril/tbl-class?style=for-the-badge&color=orange) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+
+</div>
+
 
 
 | version | install comand|
