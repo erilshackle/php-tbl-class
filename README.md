@@ -1,18 +1,18 @@
 <div align="center">
-    <h1>Tbl::class v3</h1>
-    <h3>CLI Tool to Generate Database Table Constants</h3>
-    <p>Generate PHP class constants from your database schema for type safety and to prevent typos in table/column names.</p>
-
-<p>Accessible globally for safety and productivity:</p>
-<div>
-  <code title="table"> Tbl::table</code> 
-  <code title="column">Tbl::table_column</code>
-  <code title="foreign key">Tbl::fk_table1_table2</code>
-  <code title="foreign key">Tbl::abbr1_abbr2</code>
+    <h1>Tbl::class v3 — PHP Schema Constants Generator</h1>
+    <h3>CLI Tool that Generates PHP Table & Column Constants</h3>
+    <p>
+        Generate PHP class constants from your database schema.
+        The generated classes provide type safety and prevent typos in table and column names at runtime.
+    </p>
+<p>Statically accessible constants for safety and productivity:</p>
+<div title="Examples of generated constants">
+  <code>Tbl::users</code>
+  <code>Tbl::users_email</code>
+  <code>Tbl::fk_users_roles</code>
 </div>
-
 <br>
-
+    
 ![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4?style=for-the-badge&logo=php&logoColor=white)  ![Version](https://img.shields.io/badge/Version-3.1.0-blue?style=for-the-badge)  ![Downloads](https://img.shields.io/packagist/dt/eril/tbl-class?style=for-the-badge&color=orange) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 </div>
@@ -20,11 +20,13 @@
 
 ---
 
-| version | install comand|
-| :------ |:------ |
-| stable |`composer require eril/tbl-class --dev` |
-| latest |`composer require eril/tbl-class:dev-main --dev` |
+| Version | Install command |
+| :------ | :-------------- |
+| Stable  | `composer require eril/tbl-class --dev` |
+| Dev     | `composer require eril/tbl-class:dev-main --dev` |
 
+
+> **Ideal for projects that want static, IDE-assisted safety when referencing database tables and columns.**
 
 
 ## 🚀 Quick Start
@@ -36,7 +38,7 @@ composer require eril/tbl-class --dev
 # Generate constants
 vendor/bin/tbl-class
 
-# Setup tblclass.yaml 
+# Configure tblclass.yaml (auto-created on first run)
 
 # That's it! Constants ready to use:
 echo Tbl::users;          // 'users'
@@ -50,18 +52,13 @@ echo Tbl::fk_posts_users; // 'user_id'
 
 
 * **Zero Runtime Dependencies** - Pure development tool, no production overhead
-* **Multi-Database Support** - MySQL & SQLite out of the box
 * **CI/CD Ready** - `--check` mode with consistent hashing
-* **Simple Configuration** - Clean YAML config with sensible defaults
-* **Smart Connection** - Auto-detects .env, environment vars, or custom callbacks
-* **Namespace Support** - Generate namespaced or global classes
-* **Change Tracking** - Logs schema changes for audit trail
-* **Schema Hash Verification** - Detect real schema changes only
-* **Global Constants Mode** - Generate global `const` without class
-* **Foreign Key Support** - Auto-included foreign key constants
 * **Smart Naming Strategies** - `full`, `abbr`, `smart` modes for table/column/FK names
-* **Multi-language Dictionary** - Built-in English/Portuguese abbreviation dictionaries
-* **Custom Dictionaries** - Add your own abbreviation rules
+* **Foreign Key Support** - Auto-included foreign key constants
+* **Namespace / Global Mode** - Generate namespaced or global classes
+* **Change Tracking & Hash Verification** - Detect & Logs real schema changes for audit trail
+* **Dictionary System** - Built-in English/Portuguese abbreviation dictionaries
+* **Simple Configuration & Smart Connection** - MySQL & SQLite Support and uses environment vars, or custom callbacks connection
 
 ---
 
@@ -170,7 +167,7 @@ output:
    DB_PASS=
    ```
 
-2. **Direct Values in YAML** (not recomended, but &#x1f644; ):
+2. **Direct Values in YAML** (not recomended, but works):
    ```yaml
    database:
      name: my_database
@@ -190,6 +187,8 @@ output:
 ## 🔄 CI/CD Integration
 
 ### GitHub Actions Example:
+This allows schema changes to be treated as breaking changes in your pipeline.
+
 ```yaml
 name: Check Database Schema
 
@@ -260,6 +259,7 @@ echo Tbl::usuarios_id;   // 'id'
 ```
 
 ### Autoload Configuration:
+⚠️ Required only if you are not using namespace-based autoloading.
 After generation, add to `composer.json`:
 ```json
 {
