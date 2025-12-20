@@ -36,7 +36,7 @@ class TableClassGenerator extends Generator
                 continue;
             }
 
-            // CORREÇÃO AQUI: Usa NamingResolver para obter o nome da constante da tabela
+            // Constantes de tabelas e colunas
             $tableConst = $this->namingResolver->getTableConstName($table, $this->mode);
             $content .= "\n    /** Table: $table */\n";
             $content .= "    public const $tableConst = '$table';\n";
@@ -45,9 +45,12 @@ class TableClassGenerator extends Generator
                 $columnConst = $this->namingResolver->getColumnConstName($table, $column, $this->mode);
                 $content .= "    public const $columnConst = '$column';\n";
             }
+
+            $tbl = $this->namingResolver->getTableConstName($table, $this->mode, 'abbr');
+            $content .= "    public const as_{$tbl} = '$table $tbl';\n";
         }
 
-        // SEMPRE incluir FKs se existirem
+        // Constantes FK originais
         if (!empty($foreignKeys)) {
             $content .= "\n    // --- Foreign Keys ---\n\n";
 
