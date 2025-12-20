@@ -279,6 +279,9 @@ YAML;
             if (str_contains($callback, '::')) {
                 list($class, $method) = explode('::', $callback, 2);
                 return function () use ($class, $method) {
+                    if(!method_exists($class, $method)){
+                        throw new Exception("Undefined class or method for connection callback: " . $class.'::'.$method . '()');
+                    }
                     return $class::$method();
                 };
             } elseif (function_exists($callback)) {
