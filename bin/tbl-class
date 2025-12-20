@@ -14,7 +14,7 @@ $quickHelp = "tbl-class - Generate database constants\n"
     . "       tbl-class --help\n";
 
 $fullHelp = <<<HELP
-tbl-class - Generate database table constants
+tbl-class — Generate database table, column, and foreign key constants
 
 Usage:
   tbl-class [<output>] [options]
@@ -23,27 +23,49 @@ Usage:
   tbl-class --help
 
 Arguments:
-  <output>        Output directory (default: current directory)
+  <output>         Output directory (default: output.path from tblclass.yaml or current directory)
 
 Options:
-  --check         Check mode for CI/CD (exit 0=unchanged, 1=changed)
-  --global        Generate global constants (tbl_constants.php)
-  --namespace=<ns> PHP namespace for Tbl class
-  --config         Show config file
-  --help          Show this help
+  --check          Compare current database schema with last generated state
+                   Exit code: 0 = unchanged, 1 = changed
+                   (Requires an accessible database schema)
+
+  --global         Generate global constants (tbl_constants.php)
+
+  --namespace=<ns> PHP namespace for the generated Tbl class
+
+  --config         Show the resolved configuration file
+                   (Generates a new one if it does not exist)
+
+  --help           Show this help message
 
 Examples:
-  tbl-class                    # Generate Tbl class with namespace
-  tbl-class --global          # Generate global constants
-  tbl-class --check           # Check for schema changes
-  tbl-class --config          # Show config file
+  tbl-class
+    Generate Tbl class using current configuration
+
+  tbl-class src/Models
+    Generate Tbl class into a custom directory
+
+  tbl-class --global
+    Generate global constants (tbl_constants.php)
+
+  tbl-class --check
+    Validate schema consistency against last generated state
+
+  tbl-class --config
+    Display the active configuration
 
 Modes:
-  Normal mode:     Creates a Tbl class in specified namespace
-  Global mode:     Creates global constants (tbl_constants.php)
+  Normal mode:
+    Generates a Tbl class containing table, column, and foreign key constants
 
-Note: Foreign keys are always included when found in database
+  Global mode:
+    Generates global constants without a class wrapper
 
+Notes:
+  • tbl-class does not manage databases or migrations
+  • An accessible database schema is required for generation and --check
+  • Foreign keys are included automatically when detected
 HELP;
 
 // Parse args
