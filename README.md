@@ -50,15 +50,15 @@ echo Tbl::fk_posts_users; // 'user_id'
 
 ## ✨ Features
 
-
-* **Zero Runtime Dependencies** - Pure development tool, no production overhead
-* **CI/CD Ready** - `--check` mode with consistent hashing
-* **Smart Naming Strategies** - `full`, `abbr`, `smart` modes for table/column/FK names
-* **Foreign Key Support** - Auto-included foreign key constants
-* **Namespace / Global Mode** - Generate namespaced or global classes
-* **Change Tracking & Hash Verification** - Detect & Logs real schema changes for audit trail
-* **Dictionary System** - Built-in English/Portuguese abbreviation dictionaries
-* **Simple Configuration & Smart Connection** - MySQL & SQLite Support and uses environment vars, or custom callbacks connection
+* Zero runtime dependencies – development-only tool
+* Multi-database support (MySQL & SQLite)
+* Deterministic schema generation with consistent hashing
+* **CI/CD-compatible** via `tbl-class --check` (requires an available schema)
+* Simple YAML configuration
+* Namespace or global constants generation
+* Foreign key constant generation
+* Smart naming strategies (`full`, `abbr`, `smart`)
+* Built-in and custom abbreviation dictionaries
 
 ---
 
@@ -181,46 +181,6 @@ output:
    database:
      connection: 'App\Database::getConnection'
    ```
-
----
-
-## 🔄 CI/CD Integration
-
-### GitHub Actions Example:
-This allows schema changes to be treated as breaking changes in your pipeline.
-
-```yaml
-name: Check Database Schema
-
-on: [push, pull_request]
-
-jobs:
-  check-schema:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: shivammathur/setup-php@v2
-      
-      - name: Check schema changes
-        env:
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASS: ${{ secrets.DB_PASS }}
-        run: vendor/bin/tbl-class --check
-        # Exit code 0 = unchanged, 1 = changed
-```
-
-### Composer Scripts:
-```json
-{
-  "scripts": {
-    "tbl:class": "tbl-class",
-    "tbl:sync": ["@tbl:class", "@tbl:class --check"],
-    "tbl:logs": "tbl-class-logs",
-    "tbl-class-generate": "@tbl:class .",
-    }
-}
-```
 
 ---
 
