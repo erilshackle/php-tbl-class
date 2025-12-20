@@ -139,9 +139,9 @@ class NamingResolver
 
     // ====================== MÉTODOS PÚBLICOS ======================
 
-    public function getTableConstName(string $table, string $mode = 'class'): string
+    public function getTableConstName(string $table, string $mode = 'class', $strategy = null): string
     {
-        $strategy = $this->config['table'];
+        $strategy = $strategy ?? $this->config['table'];
         $name = $this->getTableName($table, $strategy);
 
         return ($mode === 'global') ? 'tbl_' . $name : $name;

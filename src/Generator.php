@@ -229,7 +229,7 @@ class Generator
 
         if ($savedHash === $currentHash) {
             $this->logService->log('CHECK', $currentHash, 'UNCHANGED', $this->dbName);
-            echo "✅ Schema unchanged\n";
+            echo "🟢  Schema unchanged\n";
             exit(0);
         }
 
@@ -247,7 +247,7 @@ class Generator
 
         if (empty($savedHash)) {
             $this->logService->log('CHECK', $currentHash, 'INITIAL', $this->dbName);
-            echo "📝 Initial schema snapshot saved\n";
+            echo "⚙ Initial schema snapshot saved\n";
         } else {
             $this->logService->log('CHECK', $currentHash, 'CHANGED', $this->dbName);
             echo "❌ Schema changed!\n";
@@ -262,7 +262,7 @@ class Generator
         if (file_put_contents($outputFile, $content)) {
             $this->logService->log('GENERATE', $hash, 'OK', $this->dbName);
 
-            echo "✅ Generated: $outputFile\n";
+            echo "✔️  Generated: $outputFile\n";
             echo "   Tables: $tableCount\n";
             if ($fkCount > 0) {
                 echo "   Foreign Keys: $fkCount\n";
