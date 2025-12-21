@@ -98,7 +98,7 @@ class ConnectionResolver
             } elseif (str_contains($e->getMessage(), 'Access denied')) {
                 $errorMsg .= "\n💡 Check database credentials (user/password).";
             } elseif (str_contains($e->getMessage(), 'Unknown database')) {
-                $errorMsg .= "\n💡 Database '$dbName' doesn't exist. Create it first.";
+                $errorMsg .= "\n💡 Database '$dbName' doesn't exist. Create it first or ensure the db name is correct.";
             }
 
             throw new Exception($errorMsg);
