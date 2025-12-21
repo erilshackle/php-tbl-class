@@ -3,7 +3,8 @@
 
 namespace Eril\TblClass\Resolvers;
 
-use Eril\TblClass\Resolvers\Traits\TableAliasGenerator;
+use Eril\TblClass\Traits\TableAliasGenerator;
+
 
 class NamingResolver
 {
@@ -159,13 +160,13 @@ class NamingResolver
         return ($mode === 'global') ? 'tbl_' . $name : $name;
     }
 
-    public function getForeignKeyConstName(string $fromTable, string $toTable, string $mode = 'class'): string
+    public function getForeignKeyConstName(string $fromTable, string $toTable, string $mode = 'class', $unique = true): string
     {
         $strategy = $this->config['foreign_key'];
         $prefix = ($mode === 'global') ? 'tfk_' : 'fk_';
         $baseName = $this->getForeignKeyName($fromTable, $toTable, $strategy);
 
-        return $this->getUniqueName($prefix . $baseName);
+        return $unique ? $this->getUniqueName($prefix . $baseName) : $baseName;
     }
 
     // ====================== ESTRATÉGIAS SIMPLIFICADAS ======================
@@ -265,9 +266,11 @@ class NamingResolver
         return $finalName;
     }
 
-    public function getForeignKeyComment(array $fk): string
+    public function getForeignKeyComment(array $fk, bool $columns_relation = true): string
     {
-        return "/** {$fk['from_table']}.{$fk['from_column']} → {$fk['to_table']}.{$fk['to_column']} */";
+        return $columns_relation
+            ? "/** {$fk['from_table']}.{$fk['from_column']} → {$fk['to_table']}.{$fk['to_column']} */"
+            : "/** {$fk['from_table']} → {$fk['to_table']} */";
     }
 
     public function reset(): void
