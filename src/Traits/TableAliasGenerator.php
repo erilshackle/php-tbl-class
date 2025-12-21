@@ -1,6 +1,6 @@
 <?php
 
-namespace Eril\TblClass\Resolvers\Traits;
+namespace Eril\TblClass\Traits;
 
 trait TableAliasGenerator
 {
