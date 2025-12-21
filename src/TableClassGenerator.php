@@ -39,6 +39,9 @@ class TableClassGenerator extends Generator
             foreach ($aliases as $a) {
                 $content .= "    $a";
             }
+
+            $tbl = $this->namingResolver->getTableConstName($table, $this->mode, 'abbr');
+            $content .= "    public const as_{$tbl} = '$table $tbl';\n";
         }
 
         // Constantes FK
