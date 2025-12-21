@@ -209,6 +209,40 @@ class Generator
         return $foreignKeys;
     }
 
+    /**
+    * @todo will return enum contants valus to be place in Tbl::class as tbl_table_column_value
+    */
+    protected function getEnumConstants($tableName)
+    {
+        $sql = "SELECT 
+                    COLUMN_NAME,
+                    COLUMN_TYPE
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                    AND TABLE_NAME = ? 
+                    AND DATA_TYPE = 'enum'";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$tableName]);
+        $enums = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $constants = [];
+        foreach ($enums as $enum) {
+            $columnName = $enum['COLUMN_NAME'];
+            $enumString = $enum['COLUMN_TYPE'];
+            $enumString = substr($enumString, 5, -1);
+            $values = str_getcsv($enumString, ",", "'");
+            
+            foreach ($values as $value) {
+                $constantName = strtoupper($tableName . '_' . $columnName . '_' . $value);
+                $constantName = preg_replace('/[^A-Z0-9_]/', '_', $constantName);
+                $constants[$constantName] = $value;
+            }
+        }
+        
+        return $constants;
+    }
+
     protected function generateContent(array $tables, array $foreignKeys = []): string
     {
         // Método abstrato para classes filhas
