@@ -3,8 +3,13 @@
 
 namespace Eril\TblClass\Resolvers;
 
+use Eril\TblClass\Resolvers\Traits\TableAliasGenerator;
+
 class NamingResolver
 {
+
+    use TableAliasGenerator;
+
     private array $usedNames = [];
     private array $config;
     private TableAbbreviator $abbreviator;
@@ -268,5 +273,6 @@ class NamingResolver
     public function reset(): void
     {
         $this->usedNames = [];
+        $this->resetAliases();
     }
 }

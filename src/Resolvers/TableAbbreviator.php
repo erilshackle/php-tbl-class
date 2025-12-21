@@ -32,7 +32,7 @@ class TableAbbreviator
         $this->dictionary = $dictionary;
     }
 
-    public function abbreviate(string $tableName, int $maxLength = 25): string
+    public function abbreviate(string $tableName, int $maxLength = 25, bool $simpleFallback = true): string
     {
         $cacheKey = $tableName . '|' . $maxLength;
         if (isset($this->abbreviationCache[$cacheKey])) {
@@ -55,7 +55,10 @@ class TableAbbreviator
         $result = implode('', $abbreviatedWords);
 
         if (strlen($result) > $maxLength) {
-            $result = substr($result, 0, $maxLength);
+            // caso a abreviacao ficar longa e o simplefallback ativo, entao usa outra abordagem
+            $result = $simpleFallback
+                ? $this->simpleFallback($tableName, $maxLength)
+                : substr($result, 0, $maxLength);
         }
 
         $this->abbreviationCache[$cacheKey] = $result;
@@ -150,6 +153,93 @@ class TableAbbreviator
         }
 
         return $word;
+    }
+
+    private function simpleFallback(string $name, int $maxLength): string
+    {
+        $normalized = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $name));
+        $words = explode('_', $normalized);
+
+        // Tenta usar as abreviações do dicionário primeiro
+        $abbreviatedParts = [];
+        $remainingLength = $maxLength;
+
+        foreach ($words as $word) {
+            $word = trim($word);
+            if (empty($word) || in_array($word, $this->ignore)) {
+                continue;
+            }
+
+            // Obtém a abreviação do dicionário, se existir
+            $abbreviation = $this->getBestAbbreviation($word);
+
+            // Se a abreviação couber, usa ela
+            if (strlen($abbreviation) <= $remainingLength) {
+                $abbreviatedParts[] = $abbreviation;
+                $remainingLength -= strlen($abbreviation);
+            } else {
+                // Se não couber, usa apenas as primeiras letras
+                $abbreviatedParts[] = substr($abbreviation, 0, $remainingLength);
+                $remainingLength = 0;
+                break;
+            }
+        }
+
+        $result = implode('', $abbreviatedParts);
+
+        // Se ainda couber, retorna completo
+        if (strlen($result) <= $maxLength) {
+            return $result;
+        }
+
+        // Caso contrário, usa abordagem mais agressiva
+        return $this->aggressiveFallback($words, $maxLength);
+    }
+
+    private function getBestAbbreviation(string $word): string
+    {
+        // Tenta todas as formas do abbreviateWord primeiro
+        $abbreviation = $this->abbreviateWord($word);
+        
+        // Se encontrou no dicionário, retorna
+        if ($abbreviation !== $word) {
+            return $abbreviation;
+        }
+        
+        // Se não encontrou, usa regras simples
+        return substr($word, 0, min(3, strlen($word)));
+    }
+    
+    private function aggressiveFallback(array $words, int $maxLength): string
+    {
+        $result = '';
+        
+        // Primeiro, tenta usar apenas a primeira letra de cada palavra
+        foreach ($words as $word) {
+            if (!empty($word) && !in_array($word, $this->ignore)) {
+                $result .= substr($word, 0, 1);
+                if (strlen($result) >= $maxLength) {
+                    return substr($result, 0, $maxLength);
+                }
+            }
+        }
+        
+        // Se ainda tiver espaço, adiciona mais letras
+        if (strlen($result) < $maxLength) {
+            $extraChars = $maxLength - strlen($result);
+            $wordIndex = 0;
+            
+            while ($extraChars > 0 && $wordIndex < count($words)) {
+                $word = $words[$wordIndex];
+                if (!empty($word) && !in_array($word, $this->ignore)) {
+                    $result .= substr($word, 1, 1); // Segunda letra
+                    $extraChars--;
+                }
+                $wordIndex++;
+            }
+        }
+        
+        return substr($result, 0, $maxLength);
     }
 
     /**
