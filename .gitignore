@@ -16,7 +16,7 @@
 /src/Constants/Tbl.php
 /app/Constants/Tbl.php
 # Pode generalizar se houver muitos caminhos:
-# **/*Tbl.php
+**/*Tbl.php
 
 # ------------------------------------
 # 3. Arquivos de Ambiente
