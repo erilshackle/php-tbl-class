@@ -379,6 +379,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 * **IDE Autocomplete** - Get instant table/column name suggestions
 * **Refactoring Friendly** - Easy to find and update table references
 * **Schema Documentation** - Generated class serves as schema reference
+* **CI/CD-compatible** with `tbl-class --check` you can keep your Class and DB in **sync**
 * **Smart JOIN Building** - Pre-generated JOIN clauses with intelligent aliases
 * **Consistent Aliases** - Automatic 1-3 letter aliases that maintain table identity
 
