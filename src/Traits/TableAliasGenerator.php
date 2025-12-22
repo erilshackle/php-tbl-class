@@ -18,16 +18,16 @@ trait TableAliasGenerator
         if (isset($this->tableAliases[$table])) {
             return $this->tableAliases[$table];
         }
-        
+
         // Gera um novo alias seguindo as regras
         $alias = $this->generateSmartAlias($table);
-        
+
         // Armazena para reutilização
         $this->tableAliases[$table] = $alias;
-        
+
         return $alias;
     }
-    
+
     /**
      * Gera um alias inteligente baseado no nome da tabela
      */
@@ -36,48 +36,109 @@ trait TableAliasGenerator
         $normalized = strtolower($table);
         $parts = explode('_', $normalized);
         $wordCount = count($parts);
-        
+
         // Remove palavras vazias
         $parts = array_filter($parts, fn($part) => !empty($part));
         $wordCount = count($parts);
-        
+
         // Para 1 palavra: tenta 1 letra, depois 2, depois 3
         if ($wordCount === 1) {
             return $this->getBestAliasForSingleWord($parts[0]);
         }
-        
+
         // Para 2 palavras: começa com 2 letras
         if ($wordCount === 2) {
             return $this->getBestAliasForTwoWords($parts[0], $parts[1]);
         }
-        
+
         // Para 3+ palavras: começa com 3 letras
         return $this->getBestAliasForMultipleWords($parts);
     }
-    
+
     /**
      * Gera melhor alias para palavras únicas
      */
+    /**
+     * Gera melhor alias para palavras únicas - PRIMEIRA LETRA FIXA
+     */
+    /**
+     * Gera melhor alias para palavras únicas - CONSOANTES PRIMEIRO, DEPOIS VOGAIS
+     */
     private function getBestAliasForSingleWord(string $word): string
     {
-        // Tenta 1 letra
-        $alias = substr($word, 0, 1);
-        if (!$this->isAliasUsed($alias)) {
-            return $alias;
+        $letters = preg_replace('/[^a-z]/', '', $word);
+        if (empty($letters)) return 'tbl';
+
+        $firstLetter = $letters[0];
+
+        // PASSO 1: Só a primeira letra
+        if (!$this->isAliasUsed($firstLetter)) {
+            return $firstLetter;
         }
-        
-        // Tenta 2 letras (primeira + segunda)
-        if (strlen($word) >= 2) {
-            $alias = substr($word, 0, 2);
+
+        // PASSO 2: Extrai consoantes e vogais da palavra
+        $consonants = $this->extractConsonants($letters);
+        $vowels = $this->extractVowels($letters);
+
+        // PASSO 3: Primeira letra + consoantes da palavra (exceto primeira se for consoante)
+        foreach ($consonants as $consonant) {
+            if ($consonant === $firstLetter) continue; // Pula se for a mesma
+            $alias = $firstLetter . $consonant;
             if (!$this->isAliasUsed($alias)) {
                 return $alias;
             }
         }
-        
-        // Tenta combinações diferentes
-        return $this->generateUniqueAlias($word, 2);
+
+        // PASSO 4: Primeira letra + vogais da palavra
+        foreach ($vowels as $vowel) {
+            $alias = $firstLetter . $vowel;
+            if (!$this->isAliasUsed($alias)) {
+                return $alias;
+            }
+        }
+
+        // PASSO 5: Duas consoantes da palavra
+        if (count($consonants) >= 2) {
+            for ($i = 0; $i < count($consonants); $i++) {
+                for ($j = $i + 1; $j < count($consonants); $j++) {
+                    $alias = $consonants[$i] . $consonants[$j];
+                    if (!$this->isAliasUsed($alias)) {
+                        return $alias;
+                    }
+                }
+            }
+        }
+
+        // PASSO 6: Consoante + vogal
+        foreach ($consonants as $consonant) {
+            foreach ($vowels as $vowel) {
+                $alias = $consonant . $vowel;
+                if (!$this->isAliasUsed($alias)) {
+                    return $alias;
+                }
+            }
+        }
+
+        // PASSO 7: Primeira + segunda consoante + vogal (3 letras)
+        if (count($consonants) >= 2 && !empty($vowels)) {
+            $alias = $consonants[0] . $consonants[1] . $vowels[0];
+            if (!$this->isAliasUsed($alias)) {
+                return $alias;
+            }
+        }
+
+        // PASSO 8: Fallback com números
+        for ($i = 1; $i <= 99; $i++) {
+            $alias = $firstLetter . $i;
+            if (!$this->isAliasUsed($alias)) {
+                return $alias;
+            }
+        }
+
+        return $firstLetter . 'x';
     }
-    
+
+
     /**
      * Gera melhor alias para duas palavras
      */
@@ -88,7 +149,7 @@ trait TableAliasGenerator
         if (!$this->isAliasUsed($alias)) {
             return $alias;
         }
-        
+
         // Segunda opção: duas primeiras letras da primeira palavra
         if (strlen($word1) >= 2) {
             $alias = substr($word1, 0, 2);
@@ -96,11 +157,11 @@ trait TableAliasGenerator
                 return $alias;
             }
         }
-        
+
         // Terceira opção: letras diferentes
         return $this->generateUniqueAlias($word1 . $word2, 2);
     }
-    
+
     /**
      * Gera melhor alias para múltiplas palavras
      */
@@ -113,47 +174,47 @@ trait TableAliasGenerator
                 $alias .= substr($part, 0, 1);
             }
         }
-        
+
         if (strlen($alias) >= 2 && !$this->isAliasUsed($alias)) {
             return $alias;
         }
-        
+
         // Se não deu certo, tenta combinações
         $combined = implode('', $parts);
         return $this->generateUniqueAlias($combined, 3);
     }
-    
+
     /**
      * Gera um alias único com fallbacks
      */
     private function generateUniqueAlias(string $word, int $maxLength = 3): string
     {
         $letters = preg_replace('/[^a-z]/', '', $word);
-        
+
         if (strlen($letters) < 2) {
             return $this->generateFallbackAlias($letters);
         }
-        
+
         // Tenta todas as combinações possíveis
         $combinations = $this->generateLetterCombinations($letters, min(3, $maxLength));
-        
+
         foreach ($combinations as $combination) {
             if (!$this->isAliasUsed($combination)) {
                 return $combination;
             }
         }
-        
+
         // Se não achou combinação única, usa fallback
         return $this->generateFallbackAlias($letters);
     }
-    
+
     /**
      * Gera combinações de letras
      */
     private function generateLetterCombinations(string $letters, int $length): array
     {
         $combinations = [];
-        
+
         // Combinações de 1-3 letras
         for ($i = 1; $i <= $length; $i++) {
             if ($i === 1) {
@@ -184,11 +245,11 @@ trait TableAliasGenerator
                 }
             }
         }
-        
+
         // Remove duplicados e retorna
         return array_unique($combinations);
     }
-    
+
     /**
      * Fallback para quando não consegue combinação única
      */
@@ -198,16 +259,34 @@ trait TableAliasGenerator
         if (empty($base)) {
             $base = 't'; // fallback geral
         }
-        
+
         $counter = 1;
         do {
             $alias = $base . $counter;
             $counter++;
         } while ($this->isAliasUsed($alias) && $counter < 100);
-        
+
         return $alias;
     }
-    
+
+    /**
+     * Extrai consoantes de uma string
+     */
+    private function extractConsonants(string $word): array
+    {
+        $consonants = preg_replace('/[aeiou]/', '', $word);
+        return $consonants ? array_unique(str_split($consonants)) : [];
+    }
+
+    /**
+     * Extrai vogais de uma string  
+     */
+    private function extractVowels(string $word): array
+    {
+        $vowels = preg_replace('/[^aeiou]/', '', $word);
+        return $vowels ? array_unique(str_split($vowels)) : [];
+    }
+
     /**
      * Verifica se um alias já está em uso
      */
@@ -215,7 +294,7 @@ trait TableAliasGenerator
     {
         return in_array($alias, $this->tableAliases, true);
     }
-    
+
     /**
      * Reseta todos os aliases (útil para testes)
      */
@@ -223,7 +302,7 @@ trait TableAliasGenerator
     {
         $this->tableAliases = [];
     }
-    
+
     /**
      * Obtém todos os aliases mapeados (para debug)
      */
@@ -231,7 +310,7 @@ trait TableAliasGenerator
     {
         return $this->tableAliases;
     }
-    
+
     /**
      * Obtém alias sem armazenar (apenas para consulta)
      */
