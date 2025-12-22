@@ -4,6 +4,7 @@
 namespace Eril\TblClass\Resolvers;
 
 use Eril\TblClass\Traits\TableAliasGenerator;
+use InvalidArgumentException;
 
 
 class NamingResolver
@@ -24,12 +25,12 @@ class NamingResolver
     {
         $this->config = array_merge([
             'table' => 'full',
-            'column' => 'abbr',
-            'foreign_key' => 'smart',
+            'column' => 'full',
+            'foreign_key' => 'abbr',
             'abbreviation' => [
                 'dictionary_path' => null,  // Caminho customizado do usuário
                 'dictionary_lang' => 'en',   // 'en', 'pt', ou 'all'
-                'max_length' => 20,
+                'max_length' => 15,
             ],
         ], $config);
 
@@ -177,7 +178,6 @@ class NamingResolver
 
         return match ($strategy) {
             'abbr' => $this->abbreviateWithFallback($table),
-            'smart' => (strlen($normalized) < 10) ? $normalized : $this->abbreviateWithFallback($table),
             default => $normalized, // 'full'
         };
     }
@@ -189,10 +189,7 @@ class NamingResolver
 
 
         return match ($strategy) {
-            'abbr' => $this->abbreviateWithFallback($table) . '_' . $normalizedColumn,
-            'smart' => (strlen($normalizedTable) < 8)
-                ? $normalizedTable . '_' . $normalizedColumn
-                : $this->abbreviateWithFallback($table) . '_' . $normalizedColumn,
+            'abbr', 'smart' => $this->abbreviateWithFallback($table) . '_' . $normalizedColumn,
             default => $normalizedTable . '_' . $normalizedColumn, // 'full'
         };
     }
@@ -203,10 +200,7 @@ class NamingResolver
         $to = $this->normalizeName($toTable);
 
         return match ($strategy) {
-            'abbr' => $this->abbreviateWithFallback($fromTable) . '_' . $this->abbreviateWithFallback($toTable),
-            'smart' => (strlen($from) < 10 && strlen($to) < 10)
-                ? $from . '_' . $to
-                : $this->abbreviateWithFallback($fromTable) . '_' . $this->abbreviateWithFallback($toTable),
+            'abbr', 'smart' => $this->abbreviateWithFallback($fromTable) . '_' . $this->abbreviateWithFallback($toTable),
             default => $from . '_' . $to, // 'full'
         };
     }
