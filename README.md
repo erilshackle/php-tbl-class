@@ -13,7 +13,7 @@
 </div>
 <br>
     
-![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4?style=for-the-badge&logo=php&logoColor=white)  ![Version](https://img.shields.io/badge/Version-3.1.0-blue?style=for-the-badge)  ![Downloads](https://img.shields.io/packagist/dt/eril/tbl-class?style=for-the-badge&color=orange) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-777BB4?style=for-the-badge&logo=php&logoColor=white)  ![Version](https://img.shields.io/badge/Version-3.2.0-blue?style=for-the-badge)  ![Downloads](https://img.shields.io/packagist/dt/eril/tbl-class?style=for-the-badge&color=orange) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 </div>
 
@@ -57,8 +57,10 @@ echo Tbl::fk_posts_users; // 'user_id'
 * Simple YAML configuration
 * Namespace or global constants generation
 * Foreign key constant generation
-* Smart naming strategies (`full`, `abbr`, `smart`)
+* Smart naming strategies (`full`, `abbr`)
 * Built-in and custom abbreviation dictionaries
+* **Automatic JOIN constant generation** - pre-built SQL JOIN clauses
+* **Intelligent table aliases** - automatic 1-3 letter aliases for JOINs
 
 ---
 
@@ -142,11 +144,11 @@ output:
   path: "./"              # Where to save Tbl.php
   namespace: ""           # PHP namespace (optional)
   
-  # NEW: Naming strategies for constants (full, abbr, smart)
+  # Naming strategies for constants (fullname or abbreviated)
   naming:
-    table: "full"         # full, abbr, smart
-    column: "full"        # full, abbr, smart  
-    foreign_key: "smart"  # full, abbr, smart
+    table: "full"        # full, abbr
+    column: "full"       # full, abbr  
+    foreign_key: "abbr"  # full, abbr
     
     # Abbreviation settings
     abbreviation:
@@ -209,13 +211,19 @@ echo Tbl::usr;           // 'usuarios' (abbreviated)
 echo Tbl::usr_email;     // 'email'
 echo Tbl::fk_usr_prof;   // 'profissional_id'
 
-// With 'smart' strategy (abbreviates only long names):
-echo Tbl::users;         // 'users' (short, keeps full)
-echo Tbl::configuracoes; // 'cfg' (long, abbreviates)
-
 // With 'full' strategy (original behavior):
 echo Tbl::usuarios;      // 'usuarios'
 echo Tbl::usuarios_id;   // 'id'
+
+// NEW: Use pre-built JOIN constants
+$joinQuery = "SELECT * FROM " . Tbl::as_users . 
+             " JOIN " . Tbl::as_posts . 
+             " ON " . Tbl::on_users_posts;
+// Result: "SELECT * FROM users u JOIN posts p ON u.id = p.user_id"
+
+// NEW: Table aliases available
+echo Tbl::as_users;    // 'users u'
+echo Tbl::as_posts;    // 'posts p'
 ```
 
 ### Autoload Configuration:
@@ -291,10 +299,21 @@ class Tbl
     public const products_id = 'id';
     public const products_price = 'price';
 
+    // --- Aliases ---
+    
++   public const as_users = 'users u';
+
+
     // --- Foreign Keys ---
 
     /** users.id → posts.user_id */
     public const fk_posts_users = 'user_id';
+
+    
+   // --- Join Constants ---
+
+   /** users → posts */
+   public const on_users_posts = 'u.id = p.user_id';
 }
 ```
 
@@ -360,7 +379,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 * **IDE Autocomplete** - Get instant table/column name suggestions
 * **Refactoring Friendly** - Easy to find and update table references
 * **Schema Documentation** - Generated class serves as schema reference
-* **CI/CD Integration** - Automatic schema change detection
+* **Smart JOIN Building** - Pre-generated JOIN clauses with intelligent aliases
+* **Consistent Aliases** - Automatic 1-3 letter aliases that maintain table identity
 
 ---
 

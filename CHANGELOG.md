@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.2.0] - 2025-12-22
+
+### Added
+- feat: improve alias generation with consonant-first strategy
+- feat: generate comprehensive database constants class with joins and aliases
+- feat: add Spanish dictionary for table/column abbreviations
+- feat: deprecate 'smart' strategy with backward compatibility
+- feat: add JoinGenerator and OnJoinGenerator traits for FK handling
+- feat(table-aliases): implement smart alias generation with length optimization
+- Refactor README to streamline features and CI/CD section
+- Update README with additional foreign key example
+- docs: update CHANGELOG.md and README.md for new features and configuration changes
+
+### Fixed
+- fix: clean up generator code and update .gitignore
+- Fix command to generate constants in README
+- Fix data path resolution and remove debug method
+- Fix copyright comment formatting in GlobalGenerator
+- Fix copyright comment formatting in TableClassGenerator
+- Fix formatting for foreign keys comment section
+
+### Changed
+- chore: update default config - remove smart strategy, adjust lengths
+- refactor: reorganize TableClassGenerator with section-based output
+- update TableAliasGenerator.php
+- update NamingResolver.php
+- update ConnectionResolver.php
+- Implement getEnumConstants method in Generator
+- Refactor TableClassGenerator with naming constants
+- update tbl-class, Generator.php and NamingResolver.php
+- Enhance tbl-class help output and usage examples
+- Refine description and update PHPUnit version
+- Revise README for Tbl::class v3
+- Update copyright regeneration comments in GlobalGenerator
+- Update copyright comments in TableClassGenerator.php
+- Update README with installation commands
+- Remove Project Structure section from README
+- Revise database constants documentation in README
+- Change abbreviation language from 'pt' to 'en'
+
 ## [3.1.0] - 2025-12-19
 
 ### Added
