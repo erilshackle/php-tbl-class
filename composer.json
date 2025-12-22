@@ -39,9 +39,6 @@
         "ext-pdo": "*",
         "symfony/yaml": "^6.0 || ^7.0"
     },
-    "require-dev": {
-        "phpunit/phpunit": "^10.5"
-    },
     "autoload": {
         "psr-4": {
             "Eril\\TblClass\\": "src/"
@@ -61,8 +58,8 @@
         "tbl:global": "tbl-class --global",
         "tbl:check": "tbl-class --check",
         "tbl:sync": [
-            "@tbl:class",
-            "@tbl:class --check"
+            "@tbl:class --check",
+            "@tbl:class"
         ],
         "tbl:logs": "tbl-class-logs",
         "tbl-class-generate": "@tbl:class .",
