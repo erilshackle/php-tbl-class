@@ -6,6 +6,11 @@ use Eril\TblClass\Resolvers\NamingResolver;
 use PDO;
 use Exception;
 
+/**
+ * 
+ * 
+ * @todo check now must also verify if generated file is notmodified. so schema ok tbl ok!
+ */
 class Generator
 {
     protected const CLASS_NAME = 'Tbl';
