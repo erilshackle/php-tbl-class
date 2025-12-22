@@ -32,7 +32,8 @@
     "support": {
         "issues": "https://github.com/erilshackle/php-tbl-class/issues",
         "source": "https://github.com/erilshackle/php-tbl-class",
-        "docs": "https://github.com/erilshackle/php-tbl-class#readme"
+        "docs": "https://github.com/erilshackle/php-tbl-class#readme",
+        "wiki": "https://github.com/erilshackle/php-tbl-class/wiki"
     },
     "require": {
         "php": ">=8.1",
