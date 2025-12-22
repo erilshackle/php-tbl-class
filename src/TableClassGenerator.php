@@ -47,7 +47,7 @@ class TableClassGenerator extends Generator
             foreach ($foreignKeys as $fk) {
                 $content .= $this->generateForeignKeyLine($fk);
             }
-            
+
         }
 
         // Métodos on_ (opcional - configurável)
@@ -84,7 +84,7 @@ class TableClassGenerator extends Generator
         }
 
         // Alias (se necessário)
-        $doc = "/** alias: `$table` → `$alias`  */";
+        $doc = "/** alias: `$alias`  */";
         $aliases[] = "$doc public const as_{$tableConst} = '$table $alias';\n";
         return $output;
     }
