@@ -50,6 +50,9 @@ class TableClassGenerator extends Generator
             foreach ($foreignKeys as $fk) {
                 $content .= $this->generateForeignKeyLine($fk);
             }
+
+            $tbl = $this->namingResolver->getTableConstName($table, $this->mode, 'abbr');
+            $content .= "    public const as_{$tbl} = '$table $tbl';\n";
         }
 
         // Métodos on_ (opcional - configurável)
