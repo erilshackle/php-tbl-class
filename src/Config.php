@@ -84,17 +84,17 @@ output:
   path: "./"              # Where to save Tbl.php
   namespace: ""           # PHP namespace (optional)
   
-  # Naming strategies for constants (full, abbr, smart)
+  # Naming strategies for constants (fullname or abbreviated)
   naming:
-    table: "full"         # full, abbr, smart
-    column: "full"        # full, abbr, smart  
-    foreign_key: "smart"  # full, abbr, smart
+    table: "full"         # full, abbr 
+    column: "full"        # full, abbr
+    foreign_key: "abbr"   # full, abbr 
     
     # Abbreviation settings
     abbreviation:
       dictionary_lang: "en"    # 'en', 'pt', ou 'all'
       dictionary_path: null    # custom dictionary path (relative to project)
-      max_length: 20           # max abbreviation length
+      max_length: 15           # max abbreviation length
 
 YAML;
 
