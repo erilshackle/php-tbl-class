@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.3.0] - 2026-01-06
+
+### Added
+- feat(generator): introduce schema mode with embedded schema hashing and metadata-based checks
+- docs(deps): add wiki to  composer.json
+
+### Changed
+- Update TableClassGenerator.php
+- update Generator.php, GlobalGenerator.php and TableClassGenerator.php
+- now I'm waiting for your feedback and colaboration
+- docs(Tbl::class): now I'm waiting for your feedback and colaboration.
+- build(deps): update composer.json
+- build(deps): update composer.json
+- chore: release v3.2.0 - Smart Aliases & JOIN Constants
+- docs: update CHANGELOG.md and README.md
+
 ## [3.2.0] - 2025-12-22
 
 ### Added

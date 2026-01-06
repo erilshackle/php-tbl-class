@@ -1,0 +1,610 @@
+#!/usr/bin/env php
+<?php
+
+/**
+ *  Tbl Class script generator - Estrutura com múltiplas classes
+ ** $ php tbl-class-generate.php
+ * 
+ * @author erilshackle <https://github.com/erilshackle/php-tbl-class>
+ * @license MIT
+ * 
+ * HOW TO USE:
+ * - Configure DB in lines 25-30 OR use env vars
+ * - Run: php tbl-class-generate.php
+ * - Tbl.php will be created in current directory
+ * 
+ * If you're using composer, move Tbl.php where you want and autoload it in composer.json (autoload section):
+ *  "files": ["path/to/Tbl.php"]
+ * 
+ * 
+ * Config via env vars (recommended):
+ * DB_DRIVER, DB_HOST, DB_NAME, DB_USER, DB_PASS
+ */
+
+//? Set to be used instead of getenv()
+// $db_driver = 'mysql';
+// $db_host = 'localhost';
+// $db_port = 3306;
+// $db_user = 'root';
+// $db_password = '';
+// $db_name = '';
+
+//? Include a file if needed, like your bootstrap, etc
+@include __DIR__ . '/../core.php';
+
+// ==============================  NOW PLEASE, LET THE SCRIPT DO THE REST ============================== //
+
+
+// ANSI colors for terminal
+define('GREEN', "\033[32m");
+define('RED', "\033[31m");
+define('YELLOW', "\033[33m");
+define('BLUE', "\033[34m");
+define('CYAN', "\033[36m");
+define('MAGENTA', "\033[35m");
+define('BOLD', "\033[1m");
+define('RESET', "\033[0m");
+
+if (php_sapi_name() !== 'cli')
+    die("tbl-class-generate called from terminal");
+
+// Vendor autoload
+$autoload = getcwd() . '/vendor/autoload.php';
+if (!file_exists($autoload)) {
+    echo YELLOW . "⚠  vendor/autoload.php not found." . RESET . "\n";
+    echo "   Run " . CYAN . "composer install" . RESET . " if you need to load classes.\n";
+} else {
+    require $autoload;
+}
+
+// ============================== FUNÇÕES AUXILIARES ============================== //
+
+/**
+ * Converte string para camelCase
+ */
+function toCamelCase(string $string): string
+{
+    $string = str_replace(['_', '-'], ' ', $string);
+    $string = ucwords($string);
+    $string = str_replace(' ', '', $string);
+    return $string;
+}
+
+/**
+ * Gera alias para tabela (primeiras 3 letras únicas)
+ */
+function generateTableAlias(string $table, array &$existingAliases): string
+{
+    $table = strtolower($table);
+    
+    // Extrai iniciais de palavras separadas por underscore
+    if (str_contains($table, '_')) {
+        $words = explode('_', $table);
+        $alias = '';
+        foreach ($words as $word) {
+            $alias .= $word[0];
+            if (strlen($alias) >= 3) break; // Máximo 3 iniciais
+        }
+        
+        // Garante pelo menos 2 caracteres
+        if (strlen($alias) < 2) {
+            $alias = substr($table, 0, 3);
+        }
+    } else {
+        // Nome simples, usa primeiras 3 letras
+        $alias = substr($table, 0, 3);
+    }
+    
+    // Remove números do alias base (são adicionados depois se necessário)
+    $alias = preg_replace('/[0-9]/', '', $alias);
+    
+    // Torna único se necessário
+    $baseAlias = $alias;
+    $counter = 1;
+    
+    while (in_array($alias, $existingAliases)) {
+        // Primeiro tenta adicionar número
+        $alias = $baseAlias . $counter;
+        $counter++;
+        
+        // Se números estiverem ficando grandes, tenta outra abordagem
+        if ($counter > 5) {
+            // Adiciona última letra da tabela
+            $alias = $baseAlias . substr($table, -1);
+            break;
+        }
+    }
+    
+    // Fallback final
+    if (in_array($alias, $existingAliases)) {
+        $alias = $baseAlias . substr(md5($table), 0, 2);
+    }
+    
+    $existingAliases[] = $alias;
+    return $alias;
+}
+
+/**
+ * Extrai valores ENUM/SET do tipo de coluna MySQL
+ */
+function extractEnumValues(string $type): array
+{
+    if (preg_match('/^(enum|set)\((.*)\)$/i', $type, $matches)) {
+        preg_match_all("/'([^']+)'/", $matches[2], $valueMatches);
+        return $valueMatches[1] ?? [];
+    }
+    return [];
+}
+
+/**
+ * Obtém colunas de uma tabela
+ */
+function getTableColumns(PDO $pdo, string $driver, string $table): array
+{
+    $columns = [];
+    
+    try {
+        if ($driver === 'mysql') {
+            $stmt = $pdo->query("SHOW COLUMNS FROM `$table`");
+            $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } elseif ($driver === 'sqlite') {
+            $stmt = $pdo->query("PRAGMA table_info('$table')");
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($result as $col) {
+                $columns[] = [
+                    'Field' => $col['name'],
+                    'Type' => $col['type'],
+                    'Key' => $col['pk'] ? 'PRI' : '',
+                    'Extra' => ''
+                ];
+            }
+        }
+    } catch (PDOException $e) {
+        throw new RuntimeException("Could not fetch columns for table '$table': " . $e->getMessage());
+    }
+    
+    return $columns;
+}
+
+/**
+ * Obtém foreign keys de uma tabela
+ */
+function getTableForeignKeys(PDO $pdo, string $driver, string $table, string $database): array
+{
+    $foreignKeys = [];
+    
+    try {
+        if ($driver === 'mysql') {
+            $stmt = $pdo->query("
+                SELECT 
+                    COLUMN_NAME as column_name,
+                    REFERENCED_TABLE_NAME as referenced_table_name
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                WHERE TABLE_SCHEMA = '$database'
+                AND TABLE_NAME = '$table'
+                AND REFERENCED_TABLE_NAME IS NOT NULL
+                AND REFERENCED_TABLE_NAME != ''
+            ");
+            $foreignKeys = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } elseif ($driver === 'sqlite') {
+            $stmt = $pdo->query("PRAGMA foreign_key_list('$table')");
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($result as $fk) {
+                $foreignKeys[] = [
+                    'column_name' => $fk['from'],
+                    'referenced_table_name' => $fk['table']
+                ];
+            }
+        }
+    } catch (PDOException $e) {
+        // Não é crítico se não conseguir obter FKs
+    }
+    
+    return $foreignKeys;
+}
+
+/**
+ * Gera constantes de colunas
+ */
+function generateColumnConstants(array $columns): array
+{
+    $columnConstants = [];
+    $enumConstants = [];
+    
+    foreach ($columns as $column) {
+        $field = $column['Field'];
+        $type = $column['Type'] ?? '';
+        $constName = strtolower($field);
+        
+        // Coluna normal
+        $columnConstants[$constName] = $field;
+        
+        // Valores ENUM/SET
+        $enumValues = extractEnumValues($type);
+        foreach ($enumValues as $enumValue) {
+            $safeEnumValue = preg_replace('/[^a-zA-Z0-9]/', '_', strtolower($enumValue));
+            $enumConst = 'enum_' . strtolower($field) . '_' . $safeEnumValue;
+            $enumConstants[$enumConst] = $enumValue;
+        }
+    }
+    
+    return [
+        'columns' => $columnConstants,
+        'enums' => $enumConstants
+    ];
+}
+
+/**
+ * Gera constantes de foreign keys
+ */
+function generateForeignKeyConstants(array $foreignKeys): array
+{
+    $fkConstants = [];
+    
+    foreach ($foreignKeys as $fk) {
+        $fkTable = strtolower($fk['referenced_table_name']);
+        $fkConst = 'fk_' . $fkTable;
+        $fkConstants[$fkConst] = $fk['column_name'];
+    }
+    
+    return $fkConstants;
+}
+
+/**
+ * Gera classe para uma tabela específica
+ */
+function generateTableClass(
+    string $table, 
+    array $columns, 
+    array $foreignKeys, 
+    string $alias
+): array {
+    $className = 'Tbl' . toCamelCase($table);
+    
+    // Gerar todas as constantes
+    $columnData = generateColumnConstants($columns);
+    $fkConstants = generateForeignKeyConstants($foreignKeys);
+    
+    $content = "/**\n";
+    $content .= " * Constants for table: $table\n";
+    $content .= " */\n";
+    $content .= "class $className\n{\n";
+    
+    // 1. Colunas
+    if (!empty($columnData['columns'])) {
+        $content .= "    // Columns\n";
+        foreach ($columnData['columns'] as $constName => $value) {
+            $content .= "    public const $constName = '$value';\n";
+        }
+    }
+    
+    // 2. ENUMs (separado das colunas)
+    if (!empty($columnData['enums'])) {
+        $content .= "\n    // ENUM values\n";
+        foreach ($columnData['enums'] as $constName => $value) {
+            $content .= "    public const $constName = '$value';\n";
+        }
+    }
+    
+    // 3. Foreign Keys
+    if (!empty($fkConstants)) {
+        $content .= "\n    // Foreign Keys\n";
+        foreach ($fkConstants as $constName => $value) {
+            $content .= "    public const $constName = '$value';\n";
+        }
+    }
+    
+    // Informações da tabela
+    $content .= "\n    // Table info\n";
+    $content .= "    public const __table = '$table';\n";
+    $content .= "    public const __alias = '$alias';\n";
+    
+    $content .= "}\n\n";
+    
+    return [
+        'content' => $content,
+        'stats' => [
+            'columns' => count($columnData['columns']),
+            'enums' => count($columnData['enums']),
+            'fks' => count($fkConstants)
+        ]
+    ];
+}
+
+/**
+ * Gera a classe Tbl principal
+ */
+function generateMainTblClass(array $tables, array $alias = []): string
+{
+    $content = "class Tbl\n{\n";
+    
+    foreach ($tables as $table) {
+        $tableConst = strtolower($table);
+        $content .= "    public const $tableConst = '$table';\n";
+    }
+
+    $content .= "\n    // Aliassesn\n";
+
+    // foreach ($tables as $table) {
+    //     $tableConst = strtolower($table);
+    //     $content .= "    public const {$table}_{$alias[$table]} = '$table {$alias[$table]}';\n";
+    // }
+    
+    $content .= "}\n\n";
+    return $content;
+}
+
+/**
+ * Gera a classe utilitária
+ */
+function generateUtilClass(array $tables): string
+{
+    $content = "/**\n";
+    $content .= " * Utility class for table operations\n";
+    $content .= " */\n";
+    $content .= "class TblUtil\n{\n";
+    
+    // Método getTables()
+    $content .= "    /**\n";
+    $content .= "     * Get all table names\n";
+    $content .= "     * @return array\n";
+    $content .= "     */\n";
+    $content .= "    public static function getTables(): array\n";
+    $content .= "    {\n";
+    $content .= "        return [\n";
+    foreach ($tables as $table) {
+        $constName = strtolower($table);
+        $content .= "            Tbl::$constName,\n";
+    }
+    $content .= "        ];\n";
+    $content .= "    }\n\n";
+    
+    // Método getColumns()
+    $content .= "    /**\n";
+    $content .= "     * Get all columns for a table\n";
+    $content .= "     * @param string \$table\n";
+    $content .= "     * @return array\n";
+    $content .= "     */\n";
+    $content .= "    public static function getColumns(string \$table): array\n";
+    $content .= "    {\n";
+    $content .= "        \$className = 'Tbl' . self::toCamelCase(\$table);\n";
+    $content .= "        if (!class_exists(\$className)) {\n";
+    $content .= "            return [];\n";
+    $content .= "        }\n";
+    $content .= "        \n";
+    $content .= "        \$reflection = new ReflectionClass(\$className);\n";
+    $content .= "        \$constants = \$reflection->getConstants();\n";
+    $content .= "        \n";
+    $content .= "        // Filter only column constants\n";
+    $content .= "        \$columns = [];\n";
+    $content .= "        foreach (\$constants as \$name => \$value) {\n";
+    $content .= "            if (!str_starts_with(\$name, 'fk_') && \n";
+    $content .= "                !str_starts_with(\$name, 'enum_') && \n";
+    $content .= "                \$name !== 'table' && \n";
+    $content .= "                \$name !== 'alias') {\n";
+    $content .= "                \$columns[\$name] = \$value;\n";
+    $content .= "            }\n";
+    $content .= "        }\n";
+    $content .= "        \n";
+    $content .= "        return \$columns;\n";
+    $content .= "    }\n\n";
+    
+    // Método getEnums()
+    $content .= "    /**\n";
+    $content .= "     * Get all ENUM values for a table\n";
+    $content .= "     * @param string \$table\n";
+    $content .= "     * @return array\n";
+    $content .= "     */\n";
+    $content .= "    public static function getEnums(string \$table): array\n";
+    $content .= "    {\n";
+    $content .= "        \$className = 'Tbl' . self::toCamelCase(\$table);\n";
+    $content .= "        if (!class_exists(\$className)) {\n";
+    $content .= "            return [];\n";
+    $content .= "        }\n";
+    $content .= "        \n";
+    $content .= "        \$reflection = new ReflectionClass(\$className);\n";
+    $content .= "        \$constants = \$reflection->getConstants();\n";
+    $content .= "        \n";
+    $content .= "        // Filter only ENUM constants\n";
+    $content .= "        \$enums = [];\n";
+    $content .= "        foreach (\$constants as \$name => \$value) {\n";
+    $content .= "            if (str_starts_with(\$name, 'enum_')) {\n";
+    $content .= "                \$enums[\$name] = \$value;\n";
+    $content .= "            }\n";
+    $content .= "        }\n";
+    $content .= "        \n";
+    $content .= "        return \$enums;\n";
+    $content .= "    }\n\n";
+    
+    // Método getForeignKeys()
+    $content .= "    /**\n";
+    $content .= "     * Get all foreign keys for a table\n";
+    $content .= "     * @param string \$table\n";
+    $content .= "     * @return array\n";
+    $content .= "     */\n";
+    $content .= "    public static function getForeignKeys(string \$table): array\n";
+    $content .= "    {\n";
+    $content .= "        \$className = 'Tbl' . self::toCamelCase(\$table);\n";
+    $content .= "        if (!class_exists(\$className)) {\n";
+    $content .= "            return [];\n";
+    $content .= "        }\n";
+    $content .= "        \n";
+    $content .= "        \$reflection = new ReflectionClass(\$className);\n";
+    $content .= "        \$constants = \$reflection->getConstants();\n";
+    $content .= "        \n";
+    $content .= "        // Filter only FK constants\n";
+    $content .= "        \$fks = [];\n";
+    $content .= "        foreach (\$constants as \$name => \$value) {\n";
+    $content .= "            if (str_starts_with(\$name, 'fk_')) {\n";
+    $content .= "                \$fks[\$name] = \$value;\n";
+    $content .= "            }\n";
+    $content .= "        }\n";
+    $content .= "        \n";
+    $content .= "        return \$fks;\n";
+    $content .= "    }\n\n";
+    
+    // Método toCamelCase()
+    $content .= "    /**\n";
+    $content .= "     * Convert table name to camel case class name\n";
+    $content .= "     * @param string \$table\n";
+    $content .= "     * @return string\n";
+    $content .= "     */\n";
+    $content .= "    public static function toCamelCase(string \$table): string\n";
+    $content .= "    {\n";
+    $content .= "        return " . var_export(toCamelCase(''), true) . ";\n";
+    $content .= "    }\n";
+    
+    $content .= "}\n\n";
+    
+    return $content;
+}
+
+// ============================== EXECUÇÃO PRINCIPAL ============================== //
+
+// Configuration with env var fallback
+$config = [
+    'driver' => isset($db_driver) ? $db_driver : (getenv('DB_DRIVER') ?: 'mysql'),
+    'host'  =>   isset($db_host) ? $db_host : (getenv('DB_HOST') ?: 'localhost'),
+    'port' =>   isset($db_port) ? $db_port : (getenv('DB_PORT') ?: 3306),
+    'name' =>   isset($db_name) ? $db_name : (getenv('DB_NAME') ?: ''),
+    'user' =>   isset($db_user) ? $db_user : (getenv('DB_USER') ?: 'root'),
+    'password' => isset($db_password) ? $db_password : (getenv('DB_PASS') ?: ''),
+];
+
+// Check database name
+if (empty($config['name'])) {
+    echo RED . "✗ Database name not set." . RESET . "\n";
+    echo "   Set the " . CYAN . "DB_NAME" . RESET . " environment variable or edit config.\n";
+    exit(1);
+}
+
+echo BLUE . "↻ Connecting: " . RESET . "{$config['name']}@{$config['host']}\n";
+
+// Connect to database
+try {
+    if ($config['driver'] === 'mysql') {
+        $dsn = "mysql:host={$config['host']};port={$config['port']};dbname={$config['name']}";
+    } elseif ($config['driver'] === 'sqlite') {
+        $dsn = "sqlite:{$config['name']}";
+    } else {
+        echo RED . "✗ Unsupported driver: {$config['driver']}" . RESET . "\n";
+        exit(1);
+    }
+
+    $pdo = new PDO($dsn, $config['user'], $config['password']);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    echo GREEN . "✓ Connection established" . RESET . "\n";
+} catch (PDOException $e) {
+    echo RED . "✗ Connection failed: " . RESET . $e->getMessage() . "\n";
+    exit(1);
+}
+
+// Get tables
+echo BLUE . "→ Fetching tables..." . RESET . "\n";
+$tables = [];
+try {
+    if ($config['driver'] === 'mysql') {
+        $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+    } elseif ($config['driver'] === 'sqlite') {
+        $tables = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+            ->fetchAll(PDO::FETCH_COLUMN);
+    }
+} catch (PDOException $e) {
+    echo RED . "✗ Error fetching tables: " . RESET . $e->getMessage() . "\n";
+    exit(1);
+}
+
+if (empty($tables)) {
+    echo YELLOW . "⚠  No tables found in database" . RESET . "\n";
+    exit(0);
+}
+
+echo GREEN . "✓ " . count($tables) . " tables found" . RESET . "\n";
+
+// Gerar aliases únicos para todas as tabelas
+echo BLUE . "→ Generating aliases..." . RESET . "\n";
+$aliases = [];
+$tableAliases = [];
+foreach ($tables as $table) {
+    $alias = generateTableAlias($table, $aliases);
+    $tableAliases[$table] = $alias;
+}
+
+// Gerar conteúdo
+echo BLUE . "↳ Generating classes..." . RESET . "\n";
+
+// Inicializar estatísticas
+$totalStats = [
+    'columns' => 0,
+    'enums' => 0,
+    'fks' => 0
+];
+
+$content = "<?php\n\n";
+$content .= "/**\n";
+$content .= " * Database constants for {$config['name']}\n";
+$content .= " * @generated " . date('Y-m-d H:i:s') . "\n";
+$content .= " * @structure:\n";
+$content .= " * - Tbl: Nomes das tabelas\n";
+$content .= " * - Tbl{NomeTabela}: Colunas, ENUMs, FKs\n";
+$content .= " * - TblUtil: Métodos utilitários\n";
+$content .= " */\n\n";
+
+// 1. Classe principal Tbl
+$content .= generateMainTblClass($tables, $tableAliases);
+
+// 2. Classes individuais para cada tabela
+foreach ($tables as $table) {
+    $alias = $tableAliases[$table];
+    
+    echo "  Processing table: " . CYAN . $table . RESET . " (alias: " . MAGENTA . $alias . RESET . ")\n";
+    
+    try {
+        // Obter dados da tabela
+        $columns = getTableColumns($pdo, $config['driver'], $table);
+        $foreignKeys = getTableForeignKeys($pdo, $config['driver'], $table, $config['name']);
+        
+        // Gerar classe
+        $result = generateTableClass($table, $columns, $foreignKeys, $alias);
+        $content .= $result['content'];
+        
+        // Atualizar estatísticas
+        $totalStats['columns'] += $result['stats']['columns'];
+        $totalStats['enums'] += $result['stats']['enums'];
+        $totalStats['fks'] += $result['stats']['fks'];
+        
+        echo "    " . GREEN . "✓" . RESET . " " . 
+             CYAN . $result['stats']['columns'] . " cols" . RESET . ", " . 
+             YELLOW . $result['stats']['enums'] . " enums" . RESET . ", " . 
+             MAGENTA . $result['stats']['fks'] . " FKs" . RESET . "\n";
+        
+    } catch (RuntimeException $e) {
+        echo "    " . YELLOW . "⚠" . RESET . " Error: " . $e->getMessage() . "\n";
+    }
+}
+
+$content .= "// End of generated file\n";
+
+// Salvar arquivo
+$filename = 'Tbl.php';
+file_put_contents($filename, $content);
+
+// Resumo
+echo "\n" . str_repeat("═", 60) . "\n";
+echo BOLD . "📊 GENERATION SUMMARY" . RESET . "\n";
+echo str_repeat("─", 60) . "\n";
+echo GREEN . "✓ " . RESET . "File: " . CYAN . $filename . RESET . "\n";
+echo GREEN . "✓ " . RESET . "Classes generated: " . MAGENTA . (count($tables) + 2) . RESET . "\n";
+echo GREEN . "✓ " . RESET . "Tables: " . BLUE . count($tables) . RESET . "\n";
+echo GREEN . "✓ " . RESET . "Total columns: " . YELLOW . $totalStats['columns'] . RESET . "\n";
+echo GREEN . "✓ " . RESET . "Total enum values: " . CYAN . $totalStats['enums'] . RESET . "\n";
+echo GREEN . "✓ " . RESET . "Total foreign keys: " . MAGENTA . $totalStats['fks'] . RESET . "\n";
+echo GREEN . "✓ " . RESET . "Database: " . BLUE . $config['name'] . RESET;
+echo " (" . YELLOW . $config['driver'] . RESET . ")\n";
+echo str_repeat("═", 60) . "\n";
+
+
+echo "\n" . GREEN . "✓ Generation complete!" . RESET . "\n\n";
