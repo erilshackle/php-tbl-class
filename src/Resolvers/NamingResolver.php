@@ -24,6 +24,7 @@ class NamingResolver
     public function __construct(array $config = [])
     {
         $this->config = array_merge([
+            'strategy' => null,
             'table' => 'full',
             'column' => 'full',
             'foreign_key' => 'abbr',
@@ -148,26 +149,26 @@ class NamingResolver
 
     public function getTableConstName(string $table, string $mode = 'class', $strategy = null): string
     {
-        $strategy = $strategy ?? $this->config['table'];
+        $strategy = $strategy ?? $this->config['strategy'] ?? $this->config['table'];
         $name = $this->getTableName($table, $strategy);
 
         return ($mode === 'global') ? 'tbl_' . $name : $name;
     }
 
-    public function getColumnConstName(string $table, string $column, string $mode = 'class'): string
+    public function getColumnConstName(?string $table, string $column, string $mode = 'class'): string
     {
-        $strategy = $this->config['column'];
+        $strategy = $this->config['strategy'] ?? $this->config['column'];
         $name = $this->getColumnName($table, $column, $strategy);
         return ($mode === 'global') ? 'tbl_' . $name : $name;
     }
 
-    public function getForeignKeyConstName(string $fromTable, string $toTable, string $mode = 'class', $unique = true): string
+    public function getForeignKeyConstName(?string $fromTable, string $toTable, string $mode = 'class', $unique = true): string
     {
-        $strategy = $this->config['foreign_key'];
+        $strategy = $fromTable === null ? 'full' : $this->config['foreign_key'];
         $prefix = ($mode === 'global') ? 'tfk_' : 'fk_';
         $baseName = $this->getForeignKeyName($fromTable, $toTable, $strategy);
 
-        return $unique ? $this->getUniqueName($prefix . $baseName) : $baseName;
+        return $unique ? $this->getUniqueName($prefix . $baseName) : ($prefix . $baseName);
     }
 
     // ====================== ESTRATÉGIAS SIMPLIFICADAS ======================
@@ -177,38 +178,41 @@ class NamingResolver
         $normalized = $this->normalizeName($table);
 
         return match ($strategy) {
-            'abbr' => $this->abbreviateWithFallback($table),
+            'short', 'abbr' => $this->abbreviateWithFallback($table),
             default => $normalized, // 'full'
         };
     }
 
-    private function getColumnName(string $table, string $column, string $strategy): string
+    private function getColumnName(?string $table, string $column, string $strategy): string
     {
         $normalizedTable = $this->normalizeName($table);
         $normalizedColumn = $this->normalizeName($column);
+        $normalizedColumn = $table ? "_{$normalizedTable}" : $normalizedColumn;
 
 
         return match ($strategy) {
-            'abbr', 'smart' => $this->abbreviateWithFallback($table) . '_' . $normalizedColumn,
-            default => $normalizedTable . '_' . $normalizedColumn, // 'full'
+            'abbr' => $this->abbreviateWithFallback($table) . $normalizedColumn,
+            default => $normalizedTable . $normalizedColumn, // 'full'
         };
     }
 
-    private function getForeignKeyName(string $fromTable, string $toTable, string $strategy): string
+    private function getForeignKeyName(?string $fromTable, string $toTable, string $strategy): string
     {
         $from = $this->normalizeName($fromTable);
         $to = $this->normalizeName($toTable);
+        $sep = $fromTable ? '_' : '';
 
         return match ($strategy) {
-            'abbr', 'smart' => $this->abbreviateWithFallback($fromTable) . '_' . $this->abbreviateWithFallback($toTable),
-            default => $from . '_' . $to, // 'full'
+            'short', 'abbr', 'smart' => $this->abbreviateWithFallback($fromTable) . $sep . $this->abbreviateWithFallback($toTable),
+            default => $from . $sep . $to, // 'full'
         };
     }
 
     // ====================== MÉTODOS AUXILIARES ======================
 
-    private function abbreviateWithFallback(string $name): string
+    private function abbreviateWithFallback(?string $name): string
     {
+        if (!$name) return '';
         $maxLength = $this->config['abbreviation']['max_length'] ?? 20;
         $abbr = $this->abbreviator->abbreviate($name, $maxLength);
 
@@ -241,9 +245,9 @@ class NamingResolver
         return substr($normalized, 0, $maxLength);
     }
 
-    private function normalizeName(string $name): string
+    private function normalizeName(?string $name): string
     {
-        return strtolower($name);
+        return $name ?  strtolower($name) : '';
     }
 
     private function getUniqueName(string $baseName): string

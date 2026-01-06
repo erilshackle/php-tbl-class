@@ -6,6 +6,7 @@ use Eril\TblClass\Config;
 use Eril\TblClass\Resolvers\ConnectionResolver;
 use Eril\TblClass\TableClassGenerator;
 use Eril\TblClass\GlobalGenerator;
+use Eril\TblClass\SchemaClassGenerator;
 
 // Definir apenas cores que serão usadas
 define('COLOR_RESET', "\033[0m");
@@ -89,6 +90,7 @@ $configFile = null;
 $configMode = false;
 $showHelp = false;
 $globalMode = false;
+$mode = 'classes';
 
 for ($i = 1; $i < count($argv); $i++) {
     $arg = $argv[$i];
@@ -99,6 +101,10 @@ for ($i = 1; $i < count($argv); $i++) {
         $check = true;
     } elseif ($arg === '--global') {
         $globalMode = true;
+        $mode = 'global';
+    } elseif ($arg === '--legacy') {
+        $globalMode = false;
+        $mode = 'legacy';
     } elseif (str_starts_with($arg, '--namespace=')) {
         $namespace = substr($arg, 12);
     } elseif (str_starts_with($arg, '--config=')) {
@@ -216,10 +222,14 @@ try {
         // Modo Global: Sempre inclui tabelas e FKs
         $generator = new GlobalGenerator($pdo, $config, $check);
         echo COLOR_BLUE . "⚙ Mode: Global constants (tables + foreign keys)" . COLOR_RESET . "\n";
-    } else {
+    } elseif($mode == 'legacy') {
         // Modo Normal: Classe Tbl (com namespace se configurado)
         $generator = new TableClassGenerator($pdo, $config, $check);
         echo COLOR_BLUE . "⚙ Mode: Tbl class (tables + foreign keys)" . COLOR_RESET . "\n";
+    } else {
+        // Modo Normal: Classe Tbl (com namespace se configurado)
+        $generator = new SchemaClassGenerator($pdo, $config, $check);
+        echo COLOR_BLUE . "⚙ Mode: TblClasses (tables + foreign keys + enums )" . COLOR_RESET . "\n";
     }
 
     $generator->run();

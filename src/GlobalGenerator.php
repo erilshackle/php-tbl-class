@@ -15,10 +15,10 @@ class GlobalGenerator extends Generator
         $this->mode = 'global';
     }
 
-    protected function generateContent(array $tables, array $foreignKeys = []): string
+    protected function generateContent(array $tables, array $foreignKeys = [], ?string $schemaHash = null): string
     {
         $content = "<?php\n\n";
-        $content .= $this->generateHeader();
+        $content .= $this->generateHeader($schemaHash);
         $content .= $this->generateGlobalConstants($tables);
         $content .= "\n" . $this->generateForeignKeyConstants($foreignKeys) . "\n";
         // copyright
@@ -29,11 +29,12 @@ class GlobalGenerator extends Generator
         return $content;
     }
 
-    private function generateHeader(): string
+    private function generateHeader(string $schemaHash): string
     {
         $header = "/**\n";
         $header .= " * Global database constants for schema '{$this->dbName}'\n";
         $header .= " * \n";
+        $header .= " * @schema-hash md5:{$schemaHash}\n";
         $header .= " * @generated " . date('Y-m-d H:i:s') . "\n";
         $header .= " * @tool      tbl-class --global\n";
         $header .= " * \n";

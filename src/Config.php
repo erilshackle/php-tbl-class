@@ -79,13 +79,15 @@ database:
   ## For SQLite (driver: sqlite)
   # path: env(DB_PATH)    # or 'database.sqlite'
 
-# Output configuration  
+# Output configuration
 output:
+mode: "schema"          # global | schema | legacy
   path: "./"              # Where to save Tbl.php
-  namespace: ""           # PHP namespace (optional)
+  namespace: ""           # PHP namespace (optional for legacy mode)
   
   # Naming strategies for constants (fullname or abbreviated)
   naming:
+    strategy: "full"      # full, short
     table: "full"         # full, abbr 
     column: "full"        # full, abbr
     foreign_key: "abbr"   # full, abbr 
@@ -230,7 +232,7 @@ YAML;
         return rtrim($this->get('output.path', './'), '/') . '/';
     }
 
-    public function getOutputFile(string $mode = 'class'): string
+    public function getOutputFile(string $mode = 'classes'): string
     {
         // Se foi definido um arquivo personalizado, usa ele
         if ($this->customOutputFile !== null) {
@@ -240,9 +242,11 @@ YAML;
         switch ($mode) {
             case 'global':
                 return $this->getOutputPath() . 'tbl_constants.php';
-            default:
-                // class mode
+            case 'legacy':
                 return $this->getOutputPath() . 'Tbl.php';
+                default:
+                // classes mode
+                return $this->getOutputPath() . 'TblClasses.php';
         }
     }
 

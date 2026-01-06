@@ -9,7 +9,7 @@ class TableClassGenerator extends Generator
 
     use OnJoinGenerator;
 
-    protected function generateContent(array $tables, array $foreignKeys = []): string
+    protected function generateContent(array $tables, array $foreignKeys = [], ?string $schemaHash = null): string
     {
         $namespace = $this->config->get('output.namespace');
         $aliases = [];
@@ -22,11 +22,12 @@ class TableClassGenerator extends Generator
 
         $content .= "/**\n";
         $content .= " * Database constants for schema '{$this->dbName}'\n";
+        $content .= " * @schema-hash md5:{$schemaHash}\n";
         $content .= " * @generated " . date('Y-m-d H:i:s') . "\n";
-        $content .= " * @tool tbl-class\n";
+        $content .= " * @tool tbl-class v3\n";
         $content .= " * @warning AUTO-GENERATED - DO NOT EDIT MANUALLY\n";
         $content .= " */\n";
-        $content .= "class " . self::CLASS_NAME . "\n{\n";
+        $content .= "class " . static::CLASS_NAME . "\n{\n";
 
         // Constantes de tabelas (cada tabela agrupada)
         foreach ($tables as $table) {

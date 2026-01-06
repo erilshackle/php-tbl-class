@@ -2,7 +2,11 @@
 
 namespace Eril\TblClass;
 
+use Eril\TblClass\Introspection\GeneratedClassMetadata;
+use Eril\TblClass\Introspection\SchemaFingerprint;
+use Eril\TblClass\Introspection\SchemaHasher;
 use Eril\TblClass\Resolvers\NamingResolver;
+
 use PDO;
 use Exception;
 
@@ -14,15 +18,13 @@ use Exception;
 class Generator
 {
     protected const CLASS_NAME = 'Tbl';
-    protected const STATE_DIR = '.tblclass/';
-    protected const STATE_FILE = 'state.ini';
     protected Logger $logService;
     protected NamingResolver $namingResolver;
 
     protected PDO $pdo;
     protected Config $config;
     protected bool $checkMode;
-    protected string $mode = 'class'; // 'class' ou 'global'
+    protected string $mode = 'class'; // 'classes' ou 'global'
     protected string $dbName;
 
     public function __construct(PDO $pdo, Config $config, bool $checkMode = false, string $mode = 'class')
@@ -40,8 +42,6 @@ class Generator
         if (!is_dir($outputDir) && !mkdir($outputDir, 0755, true)) {
             throw new Exception("Cannot create output directory: $outputDir");
         }
-
-        $this->ensureGitignore();
     }
 
     protected function getDatabaseName(): string
@@ -74,11 +74,10 @@ class Generator
         $foreignKeys = $this->getAllForeignKeys();
 
         // Gerar conteúdo para arquivo
-        $content = $this->generateContent($tables, $foreignKeys);
-
-        // Gerar hash apenas dos dados do schema (não do arquivo formatado)
         $schemaData = $this->getSchemaDataForHash($tables, $foreignKeys);
-        $hash = md5(serialize($schemaData));
+
+        $hash = SchemaHasher::hash($schemaData);
+        $content = $this->generateContent($tables, $foreignKeys, $hash);
 
         if ($this->checkMode) {
             $this->checkSchema($hash);
@@ -215,9 +214,9 @@ class Generator
     }
 
     /**
-    * @todo will return enum contants valus to be place in Tbl::class as tbl_table_column_value
-    */
-    protected function getEnumConstants($tableName)
+     * @todo will return enum contants valus to be place in Tbl::class as tbl_table_column_value
+     */
+    protected function getEnumConstants($tableName, bool $includeTablePrefix = true)
     {
         $sql = "SELECT 
                     COLUMN_NAME,
@@ -226,29 +225,30 @@ class Generator
                 WHERE TABLE_SCHEMA = DATABASE() 
                     AND TABLE_NAME = ? 
                     AND DATA_TYPE = 'enum'";
-        
+
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$tableName]);
         $enums = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
+
         $constants = [];
         foreach ($enums as $enum) {
             $columnName = $enum['COLUMN_NAME'];
             $enumString = $enum['COLUMN_TYPE'];
             $enumString = substr($enumString, 5, -1);
             $values = str_getcsv($enumString, ",", "'");
-            
+
             foreach ($values as $value) {
-                $constantName = strtoupper($tableName . '_' . $columnName . '_' . $value);
-                $constantName = preg_replace('/[^A-Z0-9_]/', '_', $constantName);
+                $name = $includeTablePrefix ? ($tableName. '_' .$columnName) : $columnName;
+                $constantName = strtolower($name . '_' . $value);
+                $constantName = preg_replace('/[^a-z0-9_]/', '_', $constantName);
                 $constants[$constantName] = $value;
             }
         }
-        
+
         return $constants;
     }
 
-    protected function generateContent(array $tables, array $foreignKeys = []): string
+    protected function generateContent(array $tables, array $foreignKeys = [], ?string $schemaHash = null): string
     {
         // Método abstrato para classes filhas
         return '';
@@ -256,33 +256,20 @@ class Generator
 
     protected function checkSchema(string $currentHash): void
     {
-        $stateFile = $this->getStateFile();
+        $outputFile = $this->config->getOutputFile($this->mode);
 
         echo "🔍 Checking schema changes...\n";
 
-        $savedHash = '';
-        if (file_exists($stateFile)) {
-            $config = parse_ini_file($stateFile);
-            $savedHash = $config['hash'] ?? '';
+        $savedHash = GeneratedClassMetadata::extractSchemaHash($outputFile);
+        if (!$savedHash) {
+            echo "⚠ No schema hash found in generated file\n";
+            exit(1);
         }
 
         if ($savedHash === $currentHash) {
-            $this->logService->log('CHECK', $currentHash, 'UNCHANGED', $this->dbName);
-            echo "🟢  Schema unchanged\n";
+            echo "🟢 Schema unchanged\n";
             exit(0);
         }
-
-        // Update state file
-        $stateDir = dirname($stateFile);
-        if (!is_dir($stateDir)) {
-            mkdir($stateDir, 0755, true);
-        }
-
-        $content = "; Schema state\n";
-        $content .= "hash=\"$currentHash\"\n";
-        $content .= "checked=\"" . date('Y-m-d H:i:s') . "\"\n";
-
-        file_put_contents($stateFile, $content);
 
         if (empty($savedHash)) {
             $this->logService->log('CHECK', $currentHash, 'INITIAL', $this->dbName);
@@ -291,6 +278,7 @@ class Generator
             $this->logService->log('CHECK', $currentHash, 'CHANGED', $this->dbName);
             echo "❌ Schema changed!\n";
         }
+
         exit(1);
     }
 
@@ -308,18 +296,6 @@ class Generator
             }
             echo "   Database: {$this->dbName}\n";
 
-            // Save state
-            $stateDir = dirname($this->getStateFile());
-            if (!is_dir($stateDir)) {
-                mkdir($stateDir, 0755, true);
-            }
-
-            $stateContent = "; Generated state\n";
-            $stateContent .= "hash=\"$hash\"\n";
-            $stateContent .= "generated=\"" . date('Y-m-d H:i:s') . "\"\n";
-
-            file_put_contents($this->getStateFile(), $stateContent);
-
             $this->showInstructions();
         } else {
             $this->logService->log('ERROR', 'WRITE_FAILED', $outputFile, $this->dbName);
@@ -330,7 +306,7 @@ class Generator
     protected function showInstructions(): void
     {
         // Verificar se a classe Tbl já existe (apenas modo class)
-        if ($this->mode === 'class') {
+        if (in_array($this->mode, ['class', 'schemas'])) {
             $className = $this->config->get('output.namespace') ?
                 trim($this->config->get('output.namespace'), '\\') . '\\Tbl' : 'Tbl';
 
@@ -345,11 +321,19 @@ class Generator
 
         echo "\n💡 To use Tbl globally, add to composer.json:\n";
 
-        if ($this->mode === 'class' && $namespace) {
-            echo "   \"autoload\": {\n";
-            echo "       \"psr-4\": {\n";
-            echo "           \"$namespace\\\\\": \"" . dirname($relativePath) . "\"\n";
-            echo "       }\n";
+        if (in_array($this->mode, ['class', 'schemas'])) {
+            if($namespace){
+                echo "   \"autoload\": {\n";
+                echo "       \"psr-4\": {\n";
+                echo "           \"$namespace\\\\\": \"" . dirname($relativePath) . "\"\n";
+                echo "       }\n";
+            } else {
+                echo "   \"autoload\": {\n";
+                echo "       \"files\": [\n";
+                echo "           \"". $relativePath . "\"\n";
+                echo "       ]\n";
+                echo "   }\n";
+            }
         } else {
             echo "   \"autoload\": {\n";
             echo "       \"files\": [\"$relativePath\"]\n";
@@ -358,32 +342,5 @@ class Generator
 
         echo "\n   Then run: composer dump-autoload\n";
         echo str_repeat('-', 50) . "\r";
-    }
-
-    protected function getStateFile(): string
-    {
-        $stateFile = self::STATE_FILE;
-
-        // State files diferentes por modo
-        if ($this->mode === 'global') {
-            $stateFile = 'global_' . $stateFile;
-        }
-
-        return getcwd() . '/' . self::STATE_DIR . $stateFile;
-    }
-
-    private function ensureGitignore(): void
-    {
-        $gitignorePath = getcwd() . '/' . self::STATE_DIR . '/.gitignore';
-
-        if (!file_exists($gitignorePath)) {
-            $dir = dirname($gitignorePath);
-            if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
-            }
-
-            $content = "# Generated by tbl-class\n# Ignore all files in this directory\n*\n!.gitignore\n";
-            file_put_contents($gitignorePath, $content);
-        }
     }
 }
