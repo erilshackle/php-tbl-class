@@ -62,6 +62,10 @@ class Config
     private function createCleanTemplate(): void
     {
         $template = <<<YAML
+# Autoload a file
+autoload:
+  file: ""
+
 # Database configuration
 database:
   ## Optional custom connection:
@@ -206,6 +210,16 @@ YAML;
 
         $config = $value;
         return $this;
+    }
+
+    public function runAutoloaders(){
+        $file =  $this->get('autoload.file');
+
+        if(empty($file)){
+            if(is_file($file)){
+                @include_once($file);
+            }
+        }
     }
 
     public function getNamingConfig(): array
