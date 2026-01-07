@@ -4,7 +4,7 @@ namespace Eril\TblClass;
 
 use Eril\TblClass\Traits\OnJoinGenerator;
 
-class TableClassGenerator extends Generator
+class LegacyGenerator extends Generator
 {
 
     use OnJoinGenerator;
