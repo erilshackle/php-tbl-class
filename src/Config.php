@@ -63,8 +63,7 @@ class Config
     {
         $template = <<<YAML
 # Autoload a file
-autoload:
-  file: ""
+include: ""
 
 # Database configuration
 database:
@@ -213,7 +212,7 @@ YAML;
     }
 
     public function runAutoloaders(){
-        $file =  $this->get('autoload.file');
+        $file =  $this->get('include');
 
         if(empty($file)){
             if(is_file($file)){
