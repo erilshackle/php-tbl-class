@@ -180,7 +180,7 @@ YAML;
         return $value;
     }
 
-    public function get(string $key, $default = null)
+    public function get(string $key, $default = null): mixed
     {
         $keys = explode('.', $key);
         $value = $this->config;
