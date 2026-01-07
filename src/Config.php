@@ -57,6 +57,7 @@ class Config
         } catch (Exception $e) {
             throw new Exception("Error parsing YAML config: " . $e->getMessage());
         }
+        $this->runAutoloaders();
     }
 
     private function createCleanTemplate(): void
