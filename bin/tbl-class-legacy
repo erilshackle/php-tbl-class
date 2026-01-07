@@ -3,6 +3,6 @@
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use Eril\TblClass\Cli\SchemaCommand;
+use Eril\TblClass\Cli\LegacyCommand;
 
-(new SchemaCommand())->run($argv);
+(new LegacyCommand())->run($argv);

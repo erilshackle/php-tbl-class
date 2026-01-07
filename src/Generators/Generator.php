@@ -1,9 +1,10 @@
 <?php
 
-namespace Eril\TblClass;
+namespace Eril\TblClass\Generators;
 
+use Eril\TblClass\Config;
 use Eril\TblClass\Introspection\GeneratedClassMetadata;
-use Eril\TblClass\Introspection\SchemaFingerprint;
+use Eril\TblClass\Introspection\Logger;
 use Eril\TblClass\Introspection\SchemaHasher;
 use Eril\TblClass\Resolvers\NamingResolver;
 

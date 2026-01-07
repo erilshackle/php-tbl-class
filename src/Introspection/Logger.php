@@ -1,7 +1,7 @@
 <?php
 // src/Logger.php
 
-namespace Eril\TblClass;
+namespace Eril\TblClass\Introspection;
 
 class Logger
 {

@@ -1,8 +1,9 @@
 <?php
 
 
-namespace Eril\TblClass;
+namespace Eril\TblClass\Generators;
 
+use Eril\TblClass\Config;
 use PDO;
 
 class TableClassesGenerator extends Generator

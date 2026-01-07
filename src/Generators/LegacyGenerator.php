@@ -1,6 +1,6 @@
 <?php
 
-namespace Eril\TblClass;
+namespace Eril\TblClass\Generators;
 
 use Eril\TblClass\Traits\OnJoinGenerator;
 
