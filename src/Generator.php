@@ -44,6 +44,8 @@ class Generator
         }
     }
 
+
+
     protected function getDatabaseName(): string
     {
         $driver = $this->config->getDriver();

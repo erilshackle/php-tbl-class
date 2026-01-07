@@ -4,6 +4,7 @@
 
 use Eril\TblClass\Config;
 use Eril\TblClass\Resolvers\ConnectionResolver;
+use Eril\TblClass\TableClassesGenerator;
 use Eril\TblClass\TableClassGenerator;
 use Eril\TblClass\GlobalGenerator;
 use Eril\TblClass\SchemaClassGenerator;
@@ -222,13 +223,9 @@ try {
         // Modo Global: Sempre inclui tabelas e FKs
         $generator = new GlobalGenerator($pdo, $config, $check);
         echo COLOR_BLUE . "⚙ Mode: Global constants (tables + foreign keys)" . COLOR_RESET . "\n";
-    } elseif($mode == 'legacy') {
-        // Modo Normal: Classe Tbl (com namespace se configurado)
-        $generator = new TableClassGenerator($pdo, $config, $check);
-        echo COLOR_BLUE . "⚙ Mode: Tbl class (tables + foreign keys)" . COLOR_RESET . "\n";
     } else {
         // Modo Normal: Classe Tbl (com namespace se configurado)
-        $generator = new SchemaClassGenerator($pdo, $config, $check);
+        $generator = new TableClassesGenerator( $pdo, $config, $check);
         echo COLOR_BLUE . "⚙ Mode: TblClasses (tables + foreign keys + enums )" . COLOR_RESET . "\n";
     }
 
