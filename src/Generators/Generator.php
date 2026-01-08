@@ -2,6 +2,7 @@
 
 namespace Eril\TblClass\Generators;
 
+use Eril\TblClass\Cli\CliPrinter;
 use Eril\TblClass\Config;
 use Eril\TblClass\Introspection\GeneratedClassMetadata;
 use Eril\TblClass\Introspection\Logger;
@@ -14,6 +15,7 @@ abstract class Generator
 {
     private OutputWriter $output;
     protected NamingResolver $namingResolver;
+    protected Logger $logger;
 
 
     public function __construct(
@@ -24,6 +26,7 @@ abstract class Generator
     ) {
         $this->output = new OutputWriter($this->config, new Logger());
         $this->namingResolver = new NamingResolver($config->getNamingConfig());
+        $this->logger = new Logger();
     }
 
     public function run(): void
@@ -31,7 +34,7 @@ abstract class Generator
         $tables = $this->schema->getTables();
 
         if (!$tables) {
-            echo "🚫 No tables found\n";
+            CliPrinter::error('No tables found');
             exit(1);
         }
 
@@ -84,21 +87,24 @@ abstract class Generator
 
     protected function checkSchema(string $currentHash): void
     {
-        $this->output->echo("🔍 Checking schema changes...\n");
+        CliPrinter::title('Checking schema changes...');
 
         $outputFile = $this->config->getOutputFile($this->mode);
         $savedHash = GeneratedClassMetadata::extractSchemaHash($outputFile);
 
-        if (!$savedHash) {
+        if (empty($savedHash)) {
+            $this->logger->log('CHECK', $currentHash, 'INITIAL');
+            CliPrinter::warn('⚙ Initial generation required');
             exit(2);
         }
 
-        $this->output->hashCheckResult($currentHash, $savedHash);
-
         if ($savedHash === $currentHash) {
+            CliPrinter::success('🟢 Schema unchanged');
             exit(0);
         }
 
+        $this->logger->log('CHECK', $currentHash, 'CHANGED');
+        CliPrinter::error('❌ Schema changed');
         exit(1);
     }
 }

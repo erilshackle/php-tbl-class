@@ -2,6 +2,7 @@
 
 namespace Eril\TblClass;
 
+use Eril\TblClass\Cli\CliPrinter;
 use Eril\TblClass\Introspection\GeneratedClassMetadata;
 use Eril\TblClass\Introspection\Logger;
 use RuntimeException;
@@ -22,13 +23,6 @@ class OutputWriter
         }
     }
 
-    public function echo(string $text, $color = null)
-    {
-        $map = [];
-        $color = $map[$color] ?? '';
-        $reset = $map['reset'] ?? '';
-        echo $map[$color] . $text . $reset;
-    }
 
     public function write(
         string $content,
@@ -46,66 +40,55 @@ class OutputWriter
 
         $this->logger->log('GENERATE', $hash, 'OK', $dbName);
 
-        echo "✔️  Generated: $file\n";
-        echo "   Tables: $tables\n";
-        echo "   Foreign Keys: $foreignKeys\n";
-        echo "   Database: $dbName\n";
+        CliPrinter::success("Generated: $file");
+        CliPrinter::line("  > Tables: $tables");
+        CliPrinter::line("  > Foreign Keys: $foreignKeys");
+        CliPrinter::line("  > Database: $dbName");
 
         $this->printInstructions($mode);
     }
 
-    public function hashCheckResult(string $currentHash, string $savedHash): void
-    {
-        if ($savedHash === $currentHash) {
-            echo "🟢 Schema unchanged\n";
-        } else {
-            if (empty($savedHash)) {
-                $this->logger->log('CHECK', $currentHash, 'INITIAL');
-                echo "⚙ Initial schema snapshot saved\n";
-            } else {
-                $this->logger->log('CHECK', $currentHash, 'CHANGED');
-                echo "❌ Schema changed!\n";
-            }
-        }
-    }
-
     private function printInstructions(string $mode): void
     {
-        // if (in_array($this->mode, ['class', 'schemas'])) {
-        //     $className = $this->config->get('output.namespace') ?
-        //         trim($this->config->get('output.namespace'), '\\') . '\\Tbl' : 'Tbl';
+        if (in_array($mode, ['class', 'schemas'])) {
+            $className = $this->config->get('output.namespace') ?
+                trim($this->config->get('output.namespace'), '\\') . '\\Tbl' : 'Tbl';
 
-        //     if (class_exists($className)) {
-        //         return;
-        //     }
-        // }
+            if (class_exists($className)) {
+                return;
+            }
+        }
 
-        // $namespace = $this->config->get('output.namespace');
-        // $outputFile = $this->config->getOutputFile($this->mode);
-        // $relativePath = str_replace(getcwd() . '/', '', $outputFile);
+        $namespace = $this->config->get('output.namespace');
+        $outputFile = $this->config->getOutputFile($mode);
+        $relativePath = str_replace(getcwd() . '/', '', $outputFile);
 
-        // echo "\n💡 To use Tbl globally, add to composer.json:\n";
+        CliPrinter::line("\n💡 To use Tbl:: globally, add to composer.json:", 'cyan');
+        CliPrinter::line("We recommend using Composer autoload [\"file\"].", 'cyan');
 
-        // if (in_array($this->mode, ['class', 'schemas'])) {
-        //     if($namespace){
-        //         echo "   \"autoload\": {\n";
-        //         echo "       \"psr-4\": {\n";
-        //         echo "           \"$namespace\\\\\": \"" . dirname($relativePath) . "\"\n";
-        //         echo "       }\n";
-        //     } else {
-        //         echo "   \"autoload\": {\n";
-        //         echo "       \"files\": [\n";
-        //         echo "           \"". $relativePath . "\"\n";
-        //         echo "       ]\n";
-        //         echo "   }\n";
-        //     }
-        // } else {
-        //     echo "   \"autoload\": {\n";
-        //     echo "       \"files\": [\"$relativePath\"]\n";
-        //     echo "   }\n";
-        // }
+        $out = '';
 
-        // echo "\n   Then run: composer dump-autoload\n";
-        // echo str_repeat('-', 50) . "\r";
+        if (in_array($mode, ['class', 'schemas'])) {
+            if ($namespace) {
+                $out .= "   \"autoload\": {\n";
+                $out .= "       \"psr-4\": {\n";
+                $out .= "           \"$namespace\\\\\": \"" . dirname($relativePath) . "\"\n";
+                $out .= "       }\n";
+            } else {
+                $out .= "   \"autoload\": {\n";
+                $out .= "       \"files\": [\n";
+                $out .= "           \"" . $relativePath . "\"\n";
+                $out .= "       ]\n";
+                $out .= "   }\n";
+            }
+        } else {
+            $out .= "   \"autoload\": {\n";
+            $out .= "       \"files\": [\"$relativePath\"]\n";
+            $out .= "   }\n";
+        }
+
+        $out .= "\n$ Then run: composer dump-autoload\n";
+        $out .= str_repeat('-', 50) . "\r";
+        CliPrinter::line($out);
     }
 }

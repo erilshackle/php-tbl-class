@@ -256,11 +256,12 @@ YAML;
         switch ($mode) {
             case 'global':
                 return $this->getOutputPath() . 'tbl_constants.php';
-            case 'legacy':
-                return $this->getOutputPath() . 'Tbl.php';
+            case 'schema':
+                return $this->getOutputPath() . 'TblClasses.php';
                 default:
                 // classes mode
-                return $this->getOutputPath() . 'TblClasses.php';
+                                return $this->getOutputPath() . 'Tbl.php';
+
         }
     }
 
