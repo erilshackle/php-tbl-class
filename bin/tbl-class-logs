@@ -2,24 +2,12 @@
 <?php
 // bin/tbl-class-logs
 
+use Eril\TblClass\Cli\CliPrinter;
+use Eril\TblClass\Introspection\Logger;
 
-use Eril\TblClass\Logger;
+include __DIR__ . "/../src/autoload.helper.php";
 
-
-$autoloadPaths = [
-    __DIR__ . '/../../../autoload.php',
-    __DIR__ . '/../vendor/autoload.php',
-    dirname(__DIR__, 3) . '/autoload.php',
-];
-
-foreach ($autoloadPaths as $path) {
-    if (file_exists($path)) {
-        require_once $path;
-        break;
-    }
-}
-
-if (!class_exists('Eril\\TblClass\\Logger')) {
+if (!class_exists('Eril\\TblClass\\Introspection\\Logger')) {
     die("❌ Autoload not found.\n");
 }
 
@@ -79,6 +67,8 @@ try {
         exit(0);
     }
 
+    CliPrinter::title("Reading Logs");
+    
     // Read logs
     $content = file_get_contents($logFile);
     if ($content === false) {
@@ -94,7 +84,8 @@ try {
     }
 
     // Show logs
-    echo $content . "\n";
+    CliPrinter::info($content . "\n");
+    // echo $content . "\n";
 } catch (Exception $e) {
     echo "❌ Error: " . $e->getMessage() . "\n";
     exit(1);

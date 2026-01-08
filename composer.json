@@ -52,6 +52,8 @@
     },
     "bin": [
         "bin/tbl-class",
+        "bin/tbl-class-global",
+        "bin/tbl-class-legacy",
         "bin/tbl-class-logs"
     ],
     "scripts": {
