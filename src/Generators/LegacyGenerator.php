@@ -25,12 +25,15 @@ class LegacyGenerator extends Generator
             $content .= "namespace " . trim($namespace, '\\') . ";\n\n";
         }
 
+        $time = date('Y-m-d H:i:s');
+
         $content .= <<<PHP
 /**
  * Database constants for schema '{$this->schema->getDatabaseName()}'
  * @schema-hash md5:{$schemaHash}
- * @generated   {date('Y-m-d H:i:s')}
+ * @generated   {$time}
  * @tool       tbl-class v3
+ * @since 3.2
  * ⚠ AUTO-GENERATED - DO NOT EDIT MANUALLY
  */
 class Tbl

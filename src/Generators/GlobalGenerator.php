@@ -52,6 +52,7 @@ class GlobalGenerator extends Generator
  * ⚠ AUTO-GENERATED - DO NOT EDIT MANUALLY
  */
 
+
 PHP;
     }
 

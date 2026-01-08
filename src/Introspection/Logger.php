@@ -5,14 +5,14 @@ namespace Eril\TblClass\Introspection;
 
 class Logger
 {
-    private const LOG_DIR = '.tblclass/';
+    private const LOG_DIR = 'logs/';
     private const LOG_FILE = 'tbl-class.log';
     
     private string $logPath;
     
     public function __construct()
     {
-        $this->logPath = getcwd() . '/' . self::LOG_DIR . self::LOG_FILE;
+        $this->logPath = __DIR__ . '/../../' . self::LOG_DIR . self::LOG_FILE;
         $this->ensureLogDir();
     }
     

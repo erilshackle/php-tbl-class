@@ -43,7 +43,8 @@ class TableClassesGenerator extends Generator
  * @schema-hash md5:$schemaHash
  * @generated   $time
  * @tool        tbl-class
- *
+ * @ince 4
+ * 
  * ⚠ AUTO-GENERATED - DO NOT EDIT
  */
 
@@ -56,7 +57,7 @@ PHP;
 
         foreach ($tables as $table) {
             $const = $this->namingResolver->getTableConstName($table, 'full');
-            $aliases[] = "";
+            $content .= "    public const $const = '$table';\n";
         }
 
         $content .= "\n    // ALIAS \n\n";

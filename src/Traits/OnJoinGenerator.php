@@ -7,7 +7,6 @@ use Eril\TblClass\Resolvers\NamingResolver;
 trait OnJoinGenerator
 {
     protected NamingResolver $namingResolver;
-    protected string $mode = 'class';
 
     /**
      * Gera constantes on_ para todas as foreign keys
