@@ -8,7 +8,11 @@ class GlobalCommand extends AbstractCommand
 {
     protected function createGenerator(): GlobalGenerator
     {
-        return new GlobalGenerator($this->pdo, $this->config, $this->check);
+        return new GlobalGenerator(
+            $this->schema,
+            $this->config,
+            $this->check
+        );
     }
 
     protected function help(): void

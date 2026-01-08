@@ -2,13 +2,65 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.0] — 2026-01-07
+
+### Added
+- New **schema-based generation model (v4)** using classes per table
+- Dedicated CLI commands:
+  - `tbl-class` — generate schema classes (default)
+  - `tbl-class-legacy` — generate legacy constants (deprecated)
+  - `tbl-class-global` — generate global constants
+- Per-table classes with explicit constants:
+  - Columns
+  - Foreign keys
+  - ENUM values
+  - `_TABLE` and `_ALIAS` metadata
+- Cleaner and more predictable CLI UX
+- Convention-based defaults with reduced configuration surface
+
+### Changed
+- `tbl-class` now generates **schema classes by default**
+- CLI modes (`--global`, `--legacy`) were removed
+- Configuration simplified and focused on essentials
+- Generators refactored with clear responsibilities
+- Naming and scoping moved from global to table-level classes
+
+### Removed
+- Global mode flags from `tbl-class`
+- Legacy/global generation from the default command
+- Overly complex naming configuration options
+- Mode-based branching inside generators
+
+### Breaking Changes
+- `tbl-class` no longer supports `--global` or `--legacy`
+- Global and legacy outputs now require explicit commands:
+  - `tbl-class-global`
+  - `tbl-class-legacy`
+- Generated constants are no longer global by default
+- Consumers must update imports/usages to use table classes (e.g. `TblUser::ID`)
+
+### Migration Notes
+- v3 users should migrate to v4 by replacing global constants with table-scoped classes
+- Legacy behavior remains available via `tbl-class-legacy`
+- Automatic migration is not provided due to structural API changes
+
 ## [3.3.0] - 2026-01-06
 
 ### Added
+- feat(v4): redesign CLI architecture and introduce schema-based generators
+- update Config.php add autoload
 - feat(generator): introduce schema mode with embedded schema hashing and metadata-based checks
 - docs(deps): add wiki to  composer.json
 
 ### Changed
+- update Config.php
+- update tbl-class and Generator.php
+- chore: rename TableClassGenerator.php to LegacyGenerator.php
+- chore: rename SchemaClassGenerator.php to TableClassesGenerator.php
+- update Config.php: runautoloader
+- update Config.php
+- update 1 file and create 1 file
+- docs(Tbl::class: now I'm waiting for your feedback and colaboration.
 - Update TableClassGenerator.php
 - update Generator.php, GlobalGenerator.php and TableClassGenerator.php
 - now I'm waiting for your feedback and colaboration

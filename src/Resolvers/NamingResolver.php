@@ -147,28 +147,25 @@ class NamingResolver
 
     // ====================== MÉTODOS PÚBLICOS ======================
 
-    public function getTableConstName(string $table, string $mode = 'class', $strategy = null): string
+    public function getTableConstName(string $table, $strategy = null): string
     {
         $strategy = $strategy ?? $this->config['strategy'] ?? $this->config['table'];
         $name = $this->getTableName($table, $strategy);
-
-        return ($mode === 'global') ? 'tbl_' . $name : $name;
+        return $name;
     }
 
-    public function getColumnConstName(?string $table, string $column, string $mode = 'class'): string
+    public function getColumnConstName(?string $table, string $column): string
     {
         $strategy = $this->config['strategy'] ?? $this->config['column'];
         $name = $this->getColumnName($table, $column, $strategy);
-        return ($mode === 'global') ? 'tbl_' . $name : $name;
+        return $name;
     }
 
-    public function getForeignKeyConstName(?string $fromTable, string $toTable, string $mode = 'class', $unique = true): string
+    public function getForeignKeyConstName(string $fromTable, string $toTable, $unique = true): string
     {
         $strategy = $fromTable === null ? 'full' : $this->config['foreign_key'];
-        $prefix = ($mode === 'global') ? 'tfk_' : 'fk_';
         $baseName = $this->getForeignKeyName($fromTable, $toTable, $strategy);
-
-        return $unique ? $this->getUniqueName($prefix . $baseName) : ($prefix . $baseName);
+        return 'fk_' . $unique ? $this->getUniqueName($baseName) : ($baseName);
     }
 
     // ====================== ESTRATÉGIAS SIMPLIFICADAS ======================
@@ -187,24 +184,22 @@ class NamingResolver
     {
         $normalizedTable = $this->normalizeName($table);
         $normalizedColumn = $this->normalizeName($column);
-        $normalizedColumn = $table ? "_{$normalizedTable}" : $normalizedColumn;
-
+        $sep = $table === null ? '' : '_';
 
         return match ($strategy) {
-            'abbr' => $this->abbreviateWithFallback($table) . $normalizedColumn,
-            default => $normalizedTable . $normalizedColumn, // 'full'
+            'abbr' => $this->abbreviateWithFallback($normalizedTable) . $sep . $normalizedColumn,
+            default => $normalizedTable . $sep . $normalizedColumn, // 'full'
         };
     }
 
-    private function getForeignKeyName(?string $fromTable, string $toTable, string $strategy): string
+    private function getForeignKeyName(string $fromTable, string $toTable, string $strategy): string
     {
         $from = $this->normalizeName($fromTable);
         $to = $this->normalizeName($toTable);
-        $sep = $fromTable ? '_' : '';
 
         return match ($strategy) {
-            'short', 'abbr', 'smart' => $this->abbreviateWithFallback($fromTable) . $sep . $this->abbreviateWithFallback($toTable),
-            default => $from . $sep . $to, // 'full'
+            'short', 'abbr' => $this->abbreviateWithFallback($fromTable) . '_' . $this->abbreviateWithFallback($toTable),
+            default => $from . '_' . $to, // 'full'
         };
     }
 

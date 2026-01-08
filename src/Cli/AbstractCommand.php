@@ -2,15 +2,21 @@
 
 namespace Eril\TblClass\Cli;
 
+use Eril\TblClass\Schema\PgSqlSchemaReader;
+use Eril\TblClass\Schema\SqliteSchemaReader;
 use PDO;
 use Eril\TblClass\Config;
 use Eril\TblClass\Resolvers\ConnectionResolver;
 use Eril\TblClass\Generators\Generator;
+use Eril\TblClass\Schema\MySqlSchemaReader;
+use Eril\TblClass\Schema\SchemaReaderInterface;
+use Pdo\Pgsql;
 
 abstract class AbstractCommand
 {
     protected Config $config;
     protected PDO $pdo;
+    protected SchemaReaderInterface $schema = null;
     protected ?string $output = null;
     protected bool $check = false;
 
@@ -56,6 +62,13 @@ abstract class AbstractCommand
     protected function connect(): void
     {
         $this->pdo = ConnectionResolver::fromConfig($this->config);
+
+        $this->schema = match ($this->config->getDriver()) {
+            'mysql' => new MySqlSchemaReader($this->pdo, $this->config->getDatabaseName()),
+            'pgsql' => new PgSqlSchemaReader($this->pdo, $this->config->getDatabaseName()),
+            'sqlite' => new SqliteSchemaReader($this->pdo, $this->config->getDatabaseName()),
+            default => null
+        };
     }
 
     protected function execute(): void
@@ -64,6 +77,6 @@ abstract class AbstractCommand
         $generator->run();
     }
 
-    abstract protected function createGenerator(): Generator;
+    abstract protected function createGenerator();
     abstract protected function help(): void;
 }

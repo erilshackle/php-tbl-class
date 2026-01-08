@@ -36,13 +36,11 @@ trait JoinGenerator
         
         $fromColumn = $this->namingResolver->getColumnConstName(
             $fk['from_table'],
-            $fk['from_column'],
-            $this->mode
+            $fk['from_column']
         );
         $toColumn = $this->namingResolver->getColumnConstName(
             $fk['to_table'],
-            $fk['to_column'],
-            $this->mode
+            $fk['to_column']
         );
         
         // Obtém os aliases das tabelas

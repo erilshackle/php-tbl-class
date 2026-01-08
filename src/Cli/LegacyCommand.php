@@ -8,7 +8,11 @@ class LegacyCommand extends AbstractCommand
 {
     protected function createGenerator(): LegacyGenerator
     {
-        return new LegacyGenerator($this->pdo, $this->config, $this->check);
+        return new LegacyGenerator(
+      $this->schema,
+      $this->config,
+      $this->check
+    );
     }
 
     protected function help(): void

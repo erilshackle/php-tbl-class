@@ -13,6 +13,7 @@ final class GeneratedClassMetadata
     {
         return self::extractTag($file, 'file-hash');
     }
+      
 
     /**
      * Check whether a generated file was modified after creation.

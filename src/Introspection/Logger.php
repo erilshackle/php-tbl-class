@@ -24,10 +24,10 @@ class Logger
         }
     }
     
-public function log(string $action, string $hash, string $result, string $table = ''): void
+public function log(string $action, string $hash, string $result, string $db = 'DATABASE'): void
     {
         $timestamp = date('Y-m-d H:i:s');
-        $line = "[$timestamp] [$action] $table $hash $result \n";
+        $line = "[$timestamp] [$action] [$db] - $hash - $result \n";
         
         file_put_contents($this->logPath, $line, FILE_APPEND);
     }
